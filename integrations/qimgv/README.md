@@ -1,5 +1,12 @@
 # qimgv SBS / XR integration
 
+The active viewer is now maintained in the separate private
+[qimgvr repository](https://github.com/jebot-git/qimgvr). Its local installer
+builds all optional features and replaces qimgv launchers. Source on this machine:
+`/home/blux/qimgvr`; installed commands: `qimgvr`, `qimgv`, and `qimgv-sbs`.
+The system qimgv RPM has been uninstalled. The pinned image-only integration below
+is retained as the original 0.3.0 implementation; use qimgvr for current builds.
+
 This directory contains a GPLv3 patch for
 [easymodo/qimgv](https://github.com/easymodo/qimgv), pinned to
 `3127a2d211b124ad4fcf853d01e6df9323bdfdc3`. qimgv remains a separate C++/Qt

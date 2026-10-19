@@ -38,11 +38,12 @@ dependency requirements; installation needs network access for Python packages.
 Model weights and system GPU drivers are not bundled. See
 [installation, upgrades and removal](packaging/INSTALL.md).
 
-## Images in qimgv and XR
+## Images in qimgvr and XR
 
-The [qimgv integration](integrations/qimgv/README.md) adds asynchronous still-image
-conversion and a dedicated SBS display in the connected WiVRn/WayVR session.
-Install it after Arc SBS 0.3.0, then run `qimgv-sbs photo.jpg`. F8 toggles SBS;
+The [qimgvr fork](https://github.com/jebot-git/qimgvr) provides asynchronous
+still-image conversion and a dedicated SBS display in the connected WiVRn/WayVR
+session, with mpv, OpenCV, Exiv2 and KDE support.
+Install it after Arc SBS 0.3.0, then run `qimgvr photo.jpg`. F8 toggles SBS;
 `--sbs` also enables local SBS display while disconnected. The model stays loaded
 between images and qimgv remains responsive during conversion.
 
