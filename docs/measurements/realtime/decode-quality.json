@@ -1,0 +1,17 @@
+{
+  "source_first_frame": [
+    {
+      "path": "vaapi",
+      "first_frame_rgb_mae": 0.868058449074074,
+      "max": 78,
+      "changed_components": 2504866
+    },
+    {
+      "path": "vaapi_planar",
+      "first_frame_rgb_mae": 0.0,
+      "max": 0,
+      "changed_components": 0
+    }
+  ],
+  "encoded_output_psnr": "[Parsed_psnr_0 @ 0x7fe1a8004c80] PSNR y:39.395698 u:40.772531 v:37.797504 average:39.272142 min:34.375505 max:43.994786"
+}

@@ -1,0 +1,73 @@
+{
+  "source": "artifacts/feasibility-source-1080p.mp4",
+  "repeats": 2,
+  "frames_per_run": 240,
+  "cases": [
+    {
+      "depth_processing": "full",
+      "pipeline": "serial",
+      "pipeline_fps_mean": 18.86571957873509,
+      "pipeline_fps_min": 16.85699216386526,
+      "pipeline_fps_max": 20.87444699360492,
+      "active_fps_mean": 19.918703934503313,
+      "normalization_ms_mean": 12.891663904762632,
+      "inference_ms_mean": 19.571905649778877,
+      "render_ms_mean": 6.757985029435076
+    },
+    {
+      "depth_processing": "full",
+      "pipeline": "overlap",
+      "pipeline_fps_mean": 24.777291101182833,
+      "pipeline_fps_min": 24.42966080263046,
+      "pipeline_fps_max": 25.124921399735207,
+      "active_fps_mean": 26.604670640578426,
+      "normalization_ms_mean": 12.27795026225067,
+      "inference_ms_mean": 19.082030758424178,
+      "render_ms_mean": 7.317321316410623
+    },
+    {
+      "depth_processing": "sampled",
+      "pipeline": "serial",
+      "pipeline_fps_mean": 23.3748316703779,
+      "pipeline_fps_min": 20.923223493589155,
+      "pipeline_fps_max": 25.826439847166647,
+      "active_fps_mean": 24.906723308792145,
+      "normalization_ms_mean": 4.818106540794058,
+      "inference_ms_mean": 19.068889552424178,
+      "render_ms_mean": 6.550829716707085
+    },
+    {
+      "depth_processing": "sampled",
+      "pipeline": "overlap",
+      "pipeline_fps_mean": 28.968597267237566,
+      "pipeline_fps_min": 28.08673203824857,
+      "pipeline_fps_max": 29.850462496226562,
+      "active_fps_mean": 31.330211446594248,
+      "normalization_ms_mean": 4.478875964863013,
+      "inference_ms_mean": 21.37963774976015,
+      "render_ms_mean": 6.894209781239624
+    },
+    {
+      "depth_processing": "model",
+      "pipeline": "serial",
+      "pipeline_fps_mean": 24.41770198404602,
+      "pipeline_fps_min": 23.284581501162883,
+      "pipeline_fps_max": 25.55082246692915,
+      "active_fps_mean": 26.05812082490656,
+      "normalization_ms_mean": 2.93706235618932,
+      "inference_ms_mean": 20.935202452437807,
+      "render_ms_mean": 7.275140968795313
+    },
+    {
+      "depth_processing": "model",
+      "pipeline": "overlap",
+      "pipeline_fps_mean": 29.130470907109533,
+      "pipeline_fps_min": 28.466023566092016,
+      "pipeline_fps_max": 29.794918248127047,
+      "active_fps_mean": 31.54593147808923,
+      "normalization_ms_mean": 2.8788380394265305,
+      "inference_ms_mean": 22.134083099839096,
+      "render_ms_mean": 7.121415685287502
+    }
+  ]
+}

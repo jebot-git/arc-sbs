@@ -1,0 +1,25 @@
+{
+  "checks": [
+    {
+      "comparison": "full serial versus overlap",
+      "frames": 240,
+      "identical": true
+    },
+    {
+      "comparison": "sampled serial versus overlap",
+      "frames": 240,
+      "identical": true
+    },
+    {
+      "comparison": "model serial versus overlap",
+      "frames": 240,
+      "identical": true
+    },
+    {
+      "comparison": "CPU versus VA-API source decode, full processing/overlap",
+      "frames": 240,
+      "identical": true
+    }
+  ],
+  "all_overlap_parity_passed": true
+}

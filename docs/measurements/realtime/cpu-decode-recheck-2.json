@@ -1,0 +1,57 @@
+{
+  "input": "/home/blux/arc-sbs/artifacts/feasibility-source-1080p.mp4",
+  "output": "/home/blux/arc-sbs/artifacts/feasibility/cpu-decode-recheck-2.mp4",
+  "frames": 240,
+  "source_fps": 24.0,
+  "duration_seconds": 10.0,
+  "input_size": [
+    1920,
+    1080
+  ],
+  "output_size": [
+    1920,
+    1080
+  ],
+  "renderer": {
+    "backend": "opencl",
+    "device": "Intel(R) Arc(TM) A770 Graphics",
+    "platform": "Intel(R) OpenCL Graphics (discrete)",
+    "driver": "26.35.39758.11",
+    "init_seconds": 0.04305151700100396,
+    "scope": "synchronous, includes host/device copies; no zero-copy sharing"
+  },
+  "depth_processing": "full",
+  "pipeline": "overlap",
+  "decode_device": "cpu",
+  "preview_url": null,
+  "paced_input": false,
+  "first_frame_submitted_seconds": 0.22689478899701498,
+  "last_frame_submitted_seconds": 8.620161718994495,
+  "active_fps": 28.4752054227914,
+  "layout": "half",
+  "eye_order": "left_right",
+  "strength": 0.025,
+  "convergence": 0.5,
+  "encoder": "h264_vaapi",
+  "vaapi_device": "/dev/dri/by-path/pci-0000:03:00.0-render",
+  "device": "GPU.1",
+  "device_name": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+  "execution_devices": [
+    "GPU.1"
+  ],
+  "model": "/home/blux/arc-sbs/models/depth-small.xml",
+  "model_shape": [
+    294,
+    518
+  ],
+  "compile_seconds": 0.6123829720017966,
+  "pipeline_seconds": 9.088532944995677,
+  "pipeline_fps": 26.4069021317845,
+  "detected_scene_cuts": 0,
+  "depth_seconds": 6.076851909034303,
+  "inference_seconds": 3.2609574391390197,
+  "normalization_seconds": 2.8158944698952837,
+  "decode_read_seconds": 2.482471539071412,
+  "render_seconds": 1.3200897800270468,
+  "encode_write_seconds": 1.6230717199359788
+}

@@ -49,6 +49,14 @@ def parser():
     conv.add_argument("--vaapi-device", default="/dev/dri/by-path/pci-0000:03:00.0-render")
     conv.add_argument("--frames", type=int, help="Convert only the first N frames")
     conv.add_argument("--smoothing", type=float, default=0.85, help="Normalization bound EMA, [0,1)")
+    conv.add_argument("--depth-processing", choices=["full", "sampled", "model"], default="full",
+                      help="Reference full-resolution, sampled bounds, or normalize/filter before upsampling")
+    conv.add_argument("--pipeline", choices=["serial", "overlap"], default="overlap",
+                      help="Overlap one prepared frame with rendering/encoding; bounded memory")
+    conv.add_argument("--preview-port", type=int, help="Also stream H.264/AAC MPEG-TS to a local UDP player")
+    conv.add_argument("--pace", action="store_true", help="Read source at nominal playback speed")
+    conv.add_argument("--decode-device", choices=["cpu", "vaapi"], default="cpu",
+                      help="Optional VA-API decode with host download, currently 8-bit 4:2:0 only")
     conv.add_argument("--overwrite", action="store_true")
     conv.add_argument("--report", type=Path)
     demo = commands.add_parser("make-demo", help="Generate a short procedural video with audio")

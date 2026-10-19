@@ -1,0 +1,375 @@
+{
+  "scope": "12 transformed/synthetic frames, same real model output; differences versus full-resolution reference, not ground truth",
+  "model_shape": [
+    294,
+    518
+  ],
+  "input_size": [
+    1920,
+    1080
+  ],
+  "summary": [
+    {
+      "scene": "procedural",
+      "mode": "sampled",
+      "depth_mae": 0.0001856199439013532,
+      "depth_p95": 0.00030107299486796063,
+      "disparity_p99_px": 0.016178131569176912,
+      "disparity_max_px": 0.017130375063667696,
+      "disparity_mae_px": 0.008909757559498152,
+      "disparity_p95_px": 0.014451504064102968,
+      "rgb_mae_8bit": 0.006281614368998628,
+      "changed_pixel_fraction": 0.0005500096450617285
+    },
+    {
+      "scene": "procedural",
+      "mode": "model",
+      "depth_mae": 0.00021586615669851503,
+      "depth_p95": 0.0005327959855397543,
+      "disparity_p99_px": 0.05253231152892113,
+      "disparity_max_px": 2.627630869547526,
+      "disparity_mae_px": 0.01036157552152872,
+      "disparity_p95_px": 0.02557420792678992,
+      "rgb_mae_8bit": 0.009331034593621399,
+      "changed_pixel_fraction": 0.000756494341563786
+    },
+    {
+      "scene": "natural_pan",
+      "mode": "sampled",
+      "depth_mae": 0.0005396460668028643,
+      "depth_p95": 0.001625428597132365,
+      "disparity_p99_px": 0.08695268755157788,
+      "disparity_max_px": 0.11870908985535304,
+      "disparity_mae_px": 0.025903011672198772,
+      "disparity_p95_px": 0.07802057390411694,
+      "rgb_mae_8bit": 0.09753716027949244,
+      "changed_pixel_fraction": 0.017531266075102882
+    },
+    {
+      "scene": "natural_pan",
+      "mode": "model",
+      "depth_mae": 0.0012099840096198022,
+      "depth_p95": 0.006939165992662311,
+      "disparity_p99_px": 0.8057890037695566,
+      "disparity_max_px": 12.748446941375732,
+      "disparity_mae_px": 0.058079234013954796,
+      "disparity_p95_px": 0.3330799639225006,
+      "rgb_mae_8bit": 0.33842236261145403,
+      "changed_pixel_fraction": 0.0374074074074074
+    }
+  ],
+  "frames": [
+    {
+      "scene": "procedural",
+      "frame": 0,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.0002833814942277968,
+          "depth_p95": 0.0004987120628356934,
+          "disparity_p99_px": 0.026009561493992805,
+          "disparity_max_px": 0.026744842529296875,
+          "disparity_mae_px": 0.01360231265425682,
+          "disparity_p95_px": 0.02393817901611328,
+          "rgb_mae_8bit": 0.008914287551440329,
+          "changed_pixel_fraction": 0.0007084297839506173
+        },
+        "model": {
+          "depth_mae": 0.00017450717859901488,
+          "depth_p95": 0.0004476308822631836,
+          "disparity_p99_px": 0.03298473358154297,
+          "disparity_max_px": 1.2679424285888672,
+          "disparity_mae_px": 0.008376345038414001,
+          "disparity_p95_px": 0.021486282348632812,
+          "rgb_mae_8bit": 0.006930137602880659,
+          "changed_pixel_fraction": 0.0005377121913580247
+        }
+      }
+    },
+    {
+      "scene": "procedural",
+      "frame": 40,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.00031370786018669605,
+          "depth_p95": 0.000377655029296875,
+          "disparity_p99_px": 0.018616676330566406,
+          "disparity_max_px": 0.018877029418945312,
+          "disparity_mae_px": 0.01505797728896141,
+          "disparity_p95_px": 0.01812744326889515,
+          "rgb_mae_8bit": 0.00855002572016461,
+          "changed_pixel_fraction": 0.0008015046296296297
+        },
+        "model": {
+          "depth_mae": 0.00019138613424729556,
+          "depth_p95": 0.0004610121250152588,
+          "disparity_p99_px": 0.03433513641357422,
+          "disparity_max_px": 2.487337589263916,
+          "disparity_mae_px": 0.009186534211039543,
+          "disparity_p95_px": 0.022128582000732422,
+          "rgb_mae_8bit": 0.006193094135802469,
+          "changed_pixel_fraction": 0.0005131172839506173
+        }
+      }
+    },
+    {
+      "scene": "procedural",
+      "frame": 80,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.00017609301721677184,
+          "depth_p95": 0.0002327561378479004,
+          "disparity_p99_px": 0.011881829239428043,
+          "disparity_max_px": 0.013026238419115543,
+          "disparity_mae_px": 0.008452464826405048,
+          "disparity_p95_px": 0.011172294616699219,
+          "rgb_mae_8bit": 0.006656539351851852,
+          "changed_pixel_fraction": 0.0006086033950617284
+        },
+        "model": {
+          "depth_mae": 0.00024147290969267488,
+          "depth_p95": 0.000548630952835083,
+          "disparity_p99_px": 0.0967312902212143,
+          "disparity_max_px": 2.3472790718078613,
+          "disparity_mae_px": 0.011590699665248394,
+          "disparity_p95_px": 0.026334285736083984,
+          "rgb_mae_8bit": 0.013695183899176955,
+          "changed_pixel_fraction": 0.0009567901234567902
+        }
+      }
+    },
+    {
+      "scene": "procedural",
+      "frame": 120,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.00012670177966356277,
+          "depth_p95": 0.0001372694969177246,
+          "disparity_p99_px": 0.006812095642089844,
+          "disparity_max_px": 0.0070953369140625,
+          "disparity_mae_px": 0.006081685423851013,
+          "disparity_p95_px": 0.006588935852050781,
+          "rgb_mae_8bit": 0.005041473765432099,
+          "changed_pixel_fraction": 0.00040798611111111114
+        },
+        "model": {
+          "depth_mae": 0.0002290866686962545,
+          "depth_p95": 0.0005502998828887939,
+          "disparity_p99_px": 0.04250052571296692,
+          "disparity_max_px": 3.6876840591430664,
+          "disparity_mae_px": 0.010996160097420216,
+          "disparity_p95_px": 0.02641439437866211,
+          "rgb_mae_8bit": 0.008792116769547324,
+          "changed_pixel_fraction": 0.0006939621913580247
+        }
+      }
+    },
+    {
+      "scene": "procedural",
+      "frame": 160,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.00010805428610183299,
+          "depth_p95": 0.00028008222579956055,
+          "disparity_p99_px": 0.01675701141357422,
+          "disparity_max_px": 0.018073081970214844,
+          "disparity_mae_px": 0.005186606198549271,
+          "disparity_p95_px": 0.013443946838378906,
+          "rgb_mae_8bit": 0.006017071759259259,
+          "changed_pixel_fraction": 0.0005753279320987654
+        },
+        "model": {
+          "depth_mae": 0.00023398999474011362,
+          "depth_p95": 0.0006141066551208496,
+          "disparity_p99_px": 0.057163797318935394,
+          "disparity_max_px": 3.6924190521240234,
+          "disparity_mae_px": 0.011231519281864166,
+          "disparity_p95_px": 0.02947712130844593,
+          "rgb_mae_8bit": 0.01149048353909465,
+          "changed_pixel_fraction": 0.0009673996913580247
+        }
+      }
+    },
+    {
+      "scene": "procedural",
+      "frame": 200,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.00010578122601145878,
+          "depth_p95": 0.00027996301651000977,
+          "disparity_p99_px": 0.016991615295410156,
+          "disparity_max_px": 0.018965721130371094,
+          "disparity_mae_px": 0.0050774989649653435,
+          "disparity_p95_px": 0.013438224792480469,
+          "rgb_mae_8bit": 0.002510288065843621,
+          "changed_pixel_fraction": 0.0001982060185185185
+        },
+        "model": {
+          "depth_mae": 0.0002247540542157367,
+          "depth_p95": 0.0005750954151153564,
+          "disparity_p99_px": 0.05147838592529297,
+          "disparity_max_px": 2.283123016357422,
+          "disparity_mae_px": 0.010788194835186005,
+          "disparity_p95_px": 0.02760458178818226,
+          "rgb_mae_8bit": 0.008885191615226338,
+          "changed_pixel_fraction": 0.0008699845679012346
+        }
+      }
+    },
+    {
+      "scene": "natural_pan",
+      "frame": 0,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.000546693685464561,
+          "depth_p95": 0.0016383528709411621,
+          "disparity_p99_px": 0.08648300170898438,
+          "disparity_max_px": 0.1280364990234375,
+          "disparity_mae_px": 0.026241296902298927,
+          "disparity_p95_px": 0.07864093780517578,
+          "rgb_mae_8bit": 0.08359439300411522,
+          "changed_pixel_fraction": 0.016843653549382716
+        },
+        "model": {
+          "depth_mae": 0.0012389480834826827,
+          "depth_p95": 0.007038075476884842,
+          "disparity_p99_px": 0.8107867240905762,
+          "disparity_max_px": 13.164336204528809,
+          "disparity_mae_px": 0.05946951359510422,
+          "disparity_p95_px": 0.3378276228904724,
+          "rgb_mae_8bit": 0.3298341049382716,
+          "changed_pixel_fraction": 0.03721450617283951
+        }
+      }
+    },
+    {
+      "scene": "natural_pan",
+      "frame": 1,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.0005562463193200529,
+          "depth_p95": 0.001699209213256836,
+          "disparity_p99_px": 0.08690357208251953,
+          "disparity_max_px": 0.12030601501464844,
+          "disparity_mae_px": 0.026699824258685112,
+          "disparity_p95_px": 0.08156204223632812,
+          "rgb_mae_8bit": 0.0873485725308642,
+          "changed_pixel_fraction": 0.01746383101851852
+        },
+        "model": {
+          "depth_mae": 0.0012227022089064121,
+          "depth_p95": 0.006981106009334326,
+          "disparity_p99_px": 0.8098812103271484,
+          "disparity_max_px": 12.07177448272705,
+          "disparity_mae_px": 0.05868970975279808,
+          "disparity_p95_px": 0.33509308099746704,
+          "rgb_mae_8bit": 0.3367039609053498,
+          "changed_pixel_fraction": 0.03880787037037037
+        }
+      }
+    },
+    {
+      "scene": "natural_pan",
+      "frame": 2,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.0004806030774489045,
+          "depth_p95": 0.001490175724029541,
+          "disparity_p99_px": 0.0853586196899414,
+          "disparity_max_px": 0.11257266998291016,
+          "disparity_mae_px": 0.023068947717547417,
+          "disparity_p95_px": 0.07152843475341797,
+          "rgb_mae_8bit": 0.08563287680041153,
+          "changed_pixel_fraction": 0.015711323302469136
+        },
+        "model": {
+          "depth_mae": 0.001193028874695301,
+          "depth_p95": 0.006992936134338379,
+          "disparity_p99_px": 0.7861594557762146,
+          "disparity_max_px": 12.908498764038086,
+          "disparity_mae_px": 0.05726538598537445,
+          "disparity_p95_px": 0.3356609344482422,
+          "rgb_mae_8bit": 0.3487742734053498,
+          "changed_pixel_fraction": 0.03711130401234568
+        }
+      }
+    },
+    {
+      "scene": "natural_pan",
+      "frame": 3,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.0005193857941776514,
+          "depth_p95": 0.0015997886657714844,
+          "disparity_p99_px": 0.08563041687011719,
+          "disparity_max_px": 0.10978890210390091,
+          "disparity_mae_px": 0.024930518120527267,
+          "disparity_p95_px": 0.07678985595703125,
+          "rgb_mae_8bit": 0.0894897762345679,
+          "changed_pixel_fraction": 0.016086998456790125
+        },
+        "model": {
+          "depth_mae": 0.0011821093503385782,
+          "depth_p95": 0.006846251897513866,
+          "disparity_p99_px": 0.7990479469299316,
+          "disparity_max_px": 12.415301322937012,
+          "disparity_mae_px": 0.056741248816251755,
+          "disparity_p95_px": 0.3286200761795044,
+          "rgb_mae_8bit": 0.31372363683127574,
+          "changed_pixel_fraction": 0.0353149112654321
+        }
+      }
+    },
+    {
+      "scene": "natural_pan",
+      "frame": 4,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.00048494216753169894,
+          "depth_p95": 0.0014292597770690918,
+          "disparity_p99_px": 0.08125591278076172,
+          "disparity_max_px": 0.110260970890522,
+          "disparity_mae_px": 0.023277224972844124,
+          "disparity_p95_px": 0.068604476749897,
+          "rgb_mae_8bit": 0.09911072530864197,
+          "changed_pixel_fraction": 0.016474247685185184
+        },
+        "model": {
+          "depth_mae": 0.0011827523121610284,
+          "depth_p95": 0.006839190609753132,
+          "disparity_p99_px": 0.7885725498199463,
+          "disparity_max_px": 12.405588150024414,
+          "disparity_mae_px": 0.05677211284637451,
+          "disparity_p95_px": 0.3282811641693115,
+          "rgb_mae_8bit": 0.34014210390946503,
+          "changed_pixel_fraction": 0.03686631944444444
+        }
+      }
+    },
+    {
+      "scene": "natural_pan",
+      "frame": 5,
+      "comparisons": {
+        "sampled": {
+          "depth_mae": 0.0006500053568743169,
+          "depth_p95": 0.0018957853317260742,
+          "disparity_p99_px": 0.0960846021771431,
+          "disparity_max_px": 0.13128948211669922,
+          "disparity_mae_px": 0.031200258061289787,
+          "disparity_p95_px": 0.09099769592285156,
+          "rgb_mae_8bit": 0.14004661779835392,
+          "changed_pixel_fraction": 0.022607542438271604
+        },
+        "model": {
+          "depth_mae": 0.001240363228134811,
+          "depth_p95": 0.006937435828149319,
+          "disparity_p99_px": 0.840286135673523,
+          "disparity_max_px": 13.525182723999023,
+          "disparity_mae_px": 0.059537433087825775,
+          "disparity_p95_px": 0.3329969048500061,
+          "rgb_mae_8bit": 0.36135609567901233,
+          "changed_pixel_fraction": 0.03912953317901235
+        }
+      }
+    }
+  ]
+}

@@ -34,3 +34,23 @@ def test_arc_selection_does_not_assume_device_zero():
     assert select_device(Core(), "ARC") == "GPU.1"
     with pytest.raises(ValueError):
         select_device(Core(), "GPU.2")
+
+
+def test_inplace_full_normalization_preserves_reference_float32_arithmetic():
+    import cv2
+    rng = np.random.default_rng(41)
+    depth = rng.random((48,80),dtype=np.float32)*20
+    frame = np.zeros((48,80,3),np.uint8)
+    lo,hi = np.percentile(depth,[2,98]).astype(np.float32)
+    reference = cv2.bilateralFilter(np.clip((depth-lo)/(hi-lo),0,1).astype(np.float32),5,.08,3)
+    np.testing.assert_array_equal(DepthNormalizer().apply(depth,frame),reference)
+
+
+def test_sampled_bounds_are_finite_and_reset_on_scene_cut():
+    depth = np.broadcast_to(np.linspace(0,1,1024,dtype=np.float32),(512,1024)).copy()
+    frame = np.zeros((512,1024,3),np.uint8)
+    normalizer = DepthNormalizer(sampled=True)
+    out = normalizer.apply(depth,frame)
+    assert np.isfinite(out).all() and out.min() >= 0 and out.max() <= 1
+    normalizer.apply(depth+100,frame+255)
+    assert normalizer.cuts == 1 and normalizer.bounds[0] > 100

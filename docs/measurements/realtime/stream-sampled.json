@@ -1,0 +1,68 @@
+{
+  "conversion": {
+    "input": "/home/blux/arc-sbs/artifacts/feasibility-source-1080p.mp4",
+    "output": "/home/blux/arc-sbs/artifacts/feasibility/stream-sampled.mp4",
+    "frames": 144,
+    "source_fps": 24.0,
+    "duration_seconds": 6.0,
+    "input_size": [
+      1920,
+      1080
+    ],
+    "output_size": [
+      1920,
+      1080
+    ],
+    "renderer": {
+      "backend": "opencl",
+      "device": "Intel(R) Arc(TM) A770 Graphics",
+      "platform": "Intel(R) OpenCL Graphics (discrete)",
+      "driver": "26.35.39758.11",
+      "init_seconds": 0.041537995988619514,
+      "scope": "synchronous, includes host/device copies; no zero-copy sharing"
+    },
+    "depth_processing": "sampled",
+    "pipeline": "overlap",
+    "decode_device": "cpu",
+    "preview_url": "udp://127.0.0.1:33511",
+    "paced_input": true,
+    "first_frame_submitted_seconds": 0.3526242380030453,
+    "last_frame_submitted_seconds": 6.3016688889911165,
+    "active_fps": 24.037472970765023,
+    "layout": "half",
+    "eye_order": "left_right",
+    "strength": 0.025,
+    "convergence": 0.5,
+    "encoder": "h264_vaapi",
+    "vaapi_device": "/dev/dri/by-path/pci-0000:03:00.0-render",
+    "device": "GPU.1",
+    "device_name": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+    "execution_devices": [
+      "GPU.1"
+    ],
+    "model": "/home/blux/arc-sbs/models/depth-small.xml",
+    "model_shape": [
+      294,
+      518
+    ],
+    "compile_seconds": 0.6032785589923151,
+    "pipeline_seconds": 6.632037210991257,
+    "pipeline_fps": 21.712785290370384,
+    "detected_scene_cuts": 0,
+    "depth_seconds": 3.6371466268610675,
+    "inference_seconds": 2.9800867619924247,
+    "normalization_seconds": 0.6570598648686428,
+    "decode_read_seconds": 2.6225783829868305,
+    "render_seconds": 1.0860184420016594,
+    "encode_write_seconds": 0.7848869439476402
+  },
+  "receiver": "FFmpeg software decode to null output; no visual/XR latency measurement",
+  "first_decoded_progress_seconds": 1.3817549800005509,
+  "conversion_wall_seconds_including_setup": 7.44513844200992,
+  "decoded_before_conversion_finished": true,
+  "decoded_frames": 144,
+  "last_media_seconds": 6.020833,
+  "receiver_detected_audio": true,
+  "receiver_errors": [],
+  "archive_duration": 6.0
+}

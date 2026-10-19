@@ -1,0 +1,25 @@
+{
+  "device": {
+    "backend": "opencl",
+    "device": "Intel(R) Arc(TM) A770 Graphics",
+    "platform": "Intel(R) OpenCL Graphics (discrete)",
+    "driver": "26.35.39758.11",
+    "init_seconds": 0.05833874399831984,
+    "scope": "synchronous, includes host/device copies; no zero-copy sharing"
+  },
+  "iterations": 20,
+  "size": [
+    1920,
+    1080
+  ],
+  "mean_ms": {
+    "frame_upload": 0.30798390000000003,
+    "depth_upload": 0.39860114999999996,
+    "clear": 0.0600568,
+    "splat": 0.5017860000000001,
+    "pack": 0.5624579,
+    "output_download": 0.9958979500000001,
+    "wall": 5.035261750163045
+  },
+  "scope": "Profiling-enabled queue, existing buffers, three warmups. Device-event copy/kernel durations exclude Python and host enqueue overhead; wall includes those. Not an implementation of zero-copy."
+}

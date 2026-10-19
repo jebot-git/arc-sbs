@@ -1,6 +1,7 @@
 # OpenCL stereo rendering on Arc A770
 
-Implemented and validated on 2026-10-19. Conversion now defaults to GPU stereo
+Initial GPU-rendering stage, validated on 2026-10-19. Subsequent pipeline changes
+and live playback measurements are in [real-time feasibility](REALTIME_FEASIBILITY.md). Conversion now defaults to GPU stereo
 rendering through `--renderer opencl`; `--renderer cpu` keeps the reference path.
 OpenVINO depth inference and Intel VA-API encoding remain unchanged.
 
@@ -90,8 +91,8 @@ Raw reports are in [measurements/](measurements/).
 For the 72-frame GPU run, depth inference plus CPU normalization takes 2.64 seconds
 (~59% of pipeline time), rendering including copies takes 0.61 seconds (~14%),
 and pipe writes take 0.35 seconds. CPU normalization, host I/O and pipeline
-scheduling are now useful profiling targets. At 16.1 fps the observed 1080p path
-remains below 24 fps real time.
+scheduling are now useful profiling targets. At 16.1 fps that initial serial path remained below 24 fps real time. The
+subsequent real-time evaluation tests implementations that close this gap.
 
 ## Verification
 
@@ -125,5 +126,6 @@ film tests remain future work.
 Hole filling scans within each row until an occupied neighbor is found. Cost is
 content- and disparity-dependent; the supported disparity range is bounded by
 the existing strength limit. Pipeline buffers remain host-facing, so this is not
-a zero-copy design. Decode and depth normalization still run on CPU, and depth,
-rendering and encoding are not asynchronously overlapped.
+a zero-copy design. This initial phase used CPU decode/normalization and serial scheduling. The
+subsequent real-time implementation adds bounded overlap and optional VA-API
+decode while retaining host transfers.

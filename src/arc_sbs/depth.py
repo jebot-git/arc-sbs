@@ -64,13 +64,16 @@ class DepthEstimator:
         self.request = self.compiled.create_infer_request()
         self.output = self.compiled.output(0)
 
-    def infer(self, frame):
+    def infer_native(self, frame):
         tensor, (x, y, w, h) = preprocess(frame, self.height, self.width)
         depth = np.asarray(self.request.infer({0: tensor})[self.output]).squeeze().copy()
         if depth.ndim != 2 or not np.isfinite(depth).all():
             raise ValueError("Model returned invalid depth")
         depth = cv2.resize(depth, (self.width, self.height), interpolation=cv2.INTER_CUBIC)
-        return cv2.resize(depth[y:y+h, x:x+w], (frame.shape[1], frame.shape[0]),
+        return depth[y:y+h, x:x+w]
+
+    def infer(self, frame):
+        return cv2.resize(self.infer_native(frame), (frame.shape[1], frame.shape[0]),
                           interpolation=cv2.INTER_CUBIC)
 
 
@@ -81,7 +84,8 @@ class DepthNormalizer:
     prototype only smooths the normalization range and spatially filters depth.
     Larger values from the supported model mean nearer surfaces.
     """
-    def __init__(self, smoothing=0.85, cut_threshold=0.28):
+    def __init__(self, smoothing=0.85, cut_threshold=0.28, sampled=False):
+        self.sampled = sampled
         self.smoothing = smoothing
         self.cut_threshold = cut_threshold
         self.bounds = None
@@ -92,7 +96,8 @@ class DepthNormalizer:
         preview = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (64, 36)).astype(np.float32) / 255
         cut = self.previous is not None and np.mean(np.abs(preview-self.previous)) > self.cut_threshold
         self.previous = preview
-        lo, hi = np.percentile(depth, [2, 98])
+        stride = max(1, int(np.ceil(np.sqrt(depth.size / 65536)))) if self.sampled else 1
+        lo, hi = np.percentile(depth[::stride, ::stride], [2, 98])
         current = np.array([lo, hi], dtype=np.float32)
         if self.bounds is None or cut:
             self.bounds = current
@@ -102,5 +107,7 @@ class DepthNormalizer:
         lo, hi = self.bounds
         if hi-lo < 1e-6:
             return np.full_like(depth, 0.5, dtype=np.float32)
-        normalized = np.clip((depth-lo)/(hi-lo), 0, 1).astype(np.float32)
+        normalized = np.subtract(depth, lo, dtype=np.float32)
+        np.divide(normalized, hi-lo, out=normalized)
+        np.clip(normalized, 0, 1, out=normalized)
         return cv2.bilateralFilter(normalized, 5, 0.08, 3)

@@ -1,0 +1,120 @@
+{
+  "conversion": {
+    "input": "/home/blux/arc-sbs/artifacts/feasibility-source-60s.mp4",
+    "output": "/home/blux/arc-sbs/artifacts/feasibility/stream-sampled-60s.mp4",
+    "frames": 1440,
+    "source_fps": 24.0,
+    "duration_seconds": 60.0,
+    "input_size": [
+      1920,
+      1080
+    ],
+    "output_size": [
+      1920,
+      1080
+    ],
+    "renderer": {
+      "backend": "opencl",
+      "device": "Intel(R) Arc(TM) A770 Graphics",
+      "platform": "Intel(R) OpenCL Graphics (discrete)",
+      "driver": "26.35.39758.11",
+      "init_seconds": 0.04216249599994626,
+      "scope": "synchronous, includes host/device copies; no zero-copy sharing"
+    },
+    "depth_processing": "sampled",
+    "pipeline": "overlap",
+    "decode_device": "cpu",
+    "preview_url": "udp://127.0.0.1:35538",
+    "paced_input": true,
+    "first_frame_submitted_seconds": 0.3504632069962099,
+    "last_frame_submitted_seconds": 60.07626569099375,
+    "active_fps": 24.093439353712398,
+    "layout": "half",
+    "eye_order": "left_right",
+    "strength": 0.025,
+    "convergence": 0.5,
+    "encoder": "h264_vaapi",
+    "vaapi_device": "/dev/dri/by-path/pci-0000:03:00.0-render",
+    "device": "GPU.1",
+    "device_name": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+    "execution_devices": [
+      "GPU.1"
+    ],
+    "model": "/home/blux/arc-sbs/models/depth-small.xml",
+    "model_shape": [
+      294,
+      518
+    ],
+    "compile_seconds": 0.5395081330061657,
+    "pipeline_seconds": 61.85349797399249,
+    "pipeline_fps": 23.280817531216684,
+    "detected_scene_cuts": 0,
+    "depth_seconds": 31.532998828115524,
+    "inference_seconds": 24.950847427971894,
+    "normalization_seconds": 6.58215140014363,
+    "decode_read_seconds": 28.28289676902932,
+    "render_seconds": 9.606096712508588,
+    "encode_write_seconds": 7.495574471278815
+  },
+  "receiver": "FFmpeg software decode to null output; no visual/XR latency measurement",
+  "first_decoded_progress_seconds": 1.324978728996939,
+  "conversion_wall_seconds_including_setup": 62.61722216299677,
+  "decoded_before_conversion_finished": true,
+  "decoded_frames": 1440,
+  "last_media_seconds": 60.020833,
+  "receiver_detected_audio": true,
+  "receiver_errors": [],
+  "archive_duration": 60.0,
+  "xr_before": {
+    "target_hz": 90.0,
+    "streams": [
+      {
+        "id": 0,
+        "frames": 1130345,
+        "presented_frames": 1122411,
+        "encode_ms": 2.880531,
+        "delivery_ms": 3.8388069999999996
+      },
+      {
+        "id": 1,
+        "frames": 1130345,
+        "presented_frames": 1122413,
+        "encode_ms": 2.834825,
+        "delivery_ms": 11.073568
+      },
+      {
+        "id": 2,
+        "frames": 24668,
+        "presented_frames": 23468,
+        "encode_ms": 2.125286,
+        "delivery_ms": 11.192682999999999
+      }
+    ]
+  },
+  "xr_after": {
+    "target_hz": 90.0,
+    "streams": [
+      {
+        "id": 0,
+        "frames": 1136243,
+        "presented_frames": 1128216,
+        "encode_ms": 1.350326,
+        "delivery_ms": 2.3428
+      },
+      {
+        "id": 1,
+        "frames": 1136243,
+        "presented_frames": 1128218,
+        "encode_ms": 1.356538,
+        "delivery_ms": 3.3686819999999997
+      },
+      {
+        "id": 2,
+        "frames": 29111,
+        "presented_frames": 27823,
+        "encode_ms": null,
+        "delivery_ms": null
+      }
+    ]
+  }
+}

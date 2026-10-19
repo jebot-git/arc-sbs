@@ -3,11 +3,13 @@
 An independent Linux command-line prototype for converting SDR 2D video to
 side-by-side stereoscopic video using the Intel Arc A770 and OpenVINO.
 
-**Status:** working offline prototype, validated on this machine. Depth inference
+**Status:** working conversion/streaming prototype, validated on this machine. Depth inference
 and stereo rendering run on Arc using OpenVINO and OpenCL; video encoding uses
 Intel VA-API. GPU rendering is the default; `--renderer cpu` keeps the reference
 path available. See [GPU rendering and measurements](docs/GPU_RENDERING.md) and
-the [feasibility assessment](docs/FEASIBILITY.md) before planning a large conversion.
+the [real-time implementation evaluation](docs/REALTIME_FEASIBILITY.md) before
+planning a large conversion. A one-minute local 1080p24 half-SBS streaming test
+passed; actual conversion-to-headset display latency remains unmeasured.
 
 VisionDepth3D was the requested starting point, but its current application is
 private and its license prohibits derivatives. This repository contains original
@@ -43,6 +45,15 @@ uv run arc-sbs convert input.mp4 output-full-sbs.mkv \
   --report artifacts/my-conversion.json
 ```
 
+- `--pipeline overlap` is the default and prepares one frame ahead while the
+  current frame renders/encodes. `--pipeline serial` is the reference schedule.
+- `--depth-processing full` retains reference processing. `sampled` approximates
+  percentile bounds with a grid for more speed; `model` filters before upsampling
+  and changes edges more. See the measured tradeoffs in the real-time report.
+- `--preview-port PORT` also sends H.264/AAC SBS to a loopback UDP player before
+  conversion finishes. `--pace` reads the input at nominal playback speed.
+- `--decode-device vaapi` optionally uses hardware decode with host download;
+  current support is limited to 8-bit 4:2:0. CPU decode remains the default.
 - `--renderer opencl` is the default and selects the Intel A770 by name. It
   requires 64-bit integer OpenCL atomics. Initialization failures are explicit;
   use `--renderer cpu` for the NumPy/OpenCV reference implementation.
@@ -82,7 +93,7 @@ Existing local GPU artifacts include `artifacts/gpu-1080p-half-sbs.mp4`,
 `artifacts/gpu-1080p-3s-sbs.mp4`, `artifacts/gpu-natural-full-sbs.mp4`, and
 `artifacts/gpu-stereo-preview.jpg`. Media, models, and caches are excluded from Git.
 The procedural demo tests plumbing; the natural sample tests a static scene.
-Neither is a representative moving-film quality benchmark. The 39 tests pass
+Neither is a representative moving-film quality benchmark. The 49 tests pass
 on this A770; GPU tests skip on hosts without it. Full-resolution natural-scene
 parity and demo decoding can be checked with
 `uv run python scripts/validate_gpu_renderer.py` after creating the local media.

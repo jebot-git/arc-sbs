@@ -5,7 +5,9 @@ system.** OpenVINO successfully runs depth estimation on the A770, and FFmpeg
 successfully encodes stereo video through that GPU's VA-API media engine.
 The initial CPU stereo renderer prevented real-time HD conversion. A subsequent
 OpenCL implementation now accelerates that stage; see [GPU rendering](GPU_RENDERING.md)
-for current results, validation, and remaining throughput limits.
+for that stage. The latest [real-time implementation evaluation](REALTIME_FEASIBILITY.md)
+adds bounded overlap, depth variants, VA-API decode tests and a one-minute local
+1080p24 streaming test.
 
 ## VisionDepth3D starting point
 
@@ -122,7 +124,9 @@ Raw measurements and model checksums are in [measurements/](measurements/).
 GPU visibility, nearest-pixel splatting, background filling, and SBS packing are
 now implemented and measured in [GPU rendering](GPU_RENDERING.md). Next steps are
 subpixel quality, overlapping depth/video stages, reducing host/device copies,
-and profiling CPU depth normalization and decoding. The original CPU timings
+and evaluating source-to-headset latency on representative media. Bounded
+overlap, sampled normalization and optional hardware decode are now implemented
+and evaluated in the real-time report. The original CPU timings
 above are retained as a baseline.
 
 Quality work needs motion-compensated temporal depth, edge-aware upsampling,
