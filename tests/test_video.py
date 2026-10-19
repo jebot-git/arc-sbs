@@ -138,3 +138,23 @@ def test_vaapi_decode_matches_cpu_color_conversion(media, tmp_path):
                               check=True,capture_output=True,text=True).stdout
         hashes.append([s for s in result.splitlines() if not s.startswith('#')])
     assert hashes[0] and hashes[0]==hashes[1]
+
+
+def test_progress_and_cooperative_cancellation_preserve_output(media,tmp_path):
+    from arc_sbs.video import ConversionCancelled
+    source,model=media
+    output=tmp_path/'cancelled.mp4'
+    output.write_bytes(b'original')
+    events=[]
+    cancelled=False
+    def progress(event):
+        nonlocal cancelled
+        events.append(event)
+        if event['phase']=='converting':
+            cancelled=True
+    with pytest.raises(ConversionCancelled):
+        convert(source,output,model=model,device='CPU',renderer='cpu',encoder='libx264',
+                overwrite=True,progress_callback=progress,cancel_requested=lambda:cancelled)
+    assert events[0]['phase']=='initializing' and events[0]['total']==8
+    assert output.read_bytes()==b'original'
+    assert not list(tmp_path.glob('.arc-sbs-*'))

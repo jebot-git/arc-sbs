@@ -15,6 +15,10 @@ from .depth import DepthEstimator, DepthNormalizer
 from .stereo import create_renderer
 
 
+class ConversionCancelled(Exception):
+    """A cooperative cancellation that preserves the destination file."""
+
+
 def probe(path):
     result = subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-show_format",
                              "-of", "json", str(path)], check=True, capture_output=True, text=True)
@@ -46,7 +50,16 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
             vaapi_device="/dev/dri/by-path/pci-0000:03:00.0-render", frames=None,
             smoothing=0.85, overwrite=False, renderer="opencl",
             depth_processing="full", pipeline="overlap", preview_port=None, pace=False,
-            decode_device="cpu"):
+            decode_device="cpu", progress_callback=None, cancel_requested=None):
+    def check_cancel():
+        if cancel_requested is not None and cancel_requested():
+            raise ConversionCancelled("Conversion cancelled")
+
+    def progress(phase, **values):
+        if progress_callback is not None:
+            progress_callback({"phase": phase, **values})
+
+    check_cancel()
     source, output = Path(source).resolve(), Path(output).resolve()
     if source == output:
         raise ValueError("Input and output paths must differ")
@@ -89,9 +102,20 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
     if fps <= 0 or fps > 240:
         raise ValueError("Input frame rate must be >0 and <=240")
     fps_text = str(fps)
+    duration_hint = stream.get("duration", metadata.get("format", {}).get("duration"))
+    total_hint = int(stream.get("nb_frames", 0)) if str(stream.get("nb_frames", "")).isdigit() else 0
+    if not total_hint and duration_hint:
+        try:
+            total_hint = max(0, round(float(duration_hint)*float(fps)))
+        except (TypeError, ValueError, OverflowError):
+            pass
+    if frames is not None:
+        total_hint = min(total_hint, frames) if total_hint else frames
+    progress("initializing", frames=0, total=total_hint, source_fps=float(fps))
     output.parent.mkdir(parents=True, exist_ok=True)
     stereo_renderer = create_renderer(renderer)
     estimator = DepthEstimator(model, device)
+    check_cancel()
     normalizer = DepthNormalizer(smoothing, sampled=depth_processing == "sampled")
     out_width = width*2 if layout == "full" else width
     ffmpeg = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y"]
@@ -113,6 +137,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
     start = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix=".arc-sbs-", dir=output.parent) as tmp:
         tmp = Path(tmp)
+        progress("preparing", temporary_directory=str(tmp))
         silent = tmp / "silent.mkv"
         encoded = tmp / ("final"+output.suffix)
         encode_cmd = ffmpeg.copy()
@@ -164,6 +189,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
                         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="arc-sbs-depth")
                         pending = executor.submit(prepare_next)
                     while frames is None or count < frames:
+                        check_cancel()
                         prepared = pending.result() if executor else prepare_next()
                         if prepared is None:
                             break
@@ -179,8 +205,13 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
                         first_submitted = first_submitted or time.perf_counter()-start
                         last_submitted = time.perf_counter()-start
                         count += 1
+                        if count == 1 or count % 5 == 0:
+                            progress("converting", frames=count, total=total_hint,
+                                     fps=count/(time.perf_counter()-start))
                         if count % 30 == 0:
                             print(f"{count} frames; {count/(time.perf_counter()-start):.2f} fps", flush=True)
+                    check_cancel()
+                    progress("encoding", frames=count, total=total_hint)
                     writer.stdin.close()
                     if writer.wait() != 0:
                         raise RuntimeError("FFmpeg encoder failed")
@@ -195,7 +226,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
                     enc_log.flush()
                     dec_log.seek(0)
                     enc_log.seek(0)
-                    if isinstance(exc, KeyboardInterrupt):
+                    if isinstance(exc, (KeyboardInterrupt, ConversionCancelled)):
                         raise
                     raise RuntimeError(f"{exc}\nDecoder: {dec_log.read().decode(errors='replace')[-4000:]}\n"
                                        f"Encoder: {enc_log.read().decode(errors='replace')[-4000:]}") from exc
@@ -208,6 +239,8 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
                 decoder.stdout.close()
         if count == 0:
             raise RuntimeError("No frames decoded")
+        check_cancel()
+        progress("finalizing", frames=count, total=total_hint)
         duration = count/float(fps)
         # Remux the produced video and first optional audio stream, bounded to
         # converted duration. AAC keeps MP4 compatibility across input codecs.
@@ -217,6 +250,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
         if output.suffix.lower() == ".mp4":
             mux_cmd += ["-movflags", "+faststart"]
         subprocess.run(mux_cmd+[str(encoded)], check=True, capture_output=True)
+        check_cancel()
         if overwrite:
             os.replace(encoded, output)
         else:

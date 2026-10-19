@@ -36,6 +36,19 @@ A prepared model already exists at `models/depth-small.xml` on this machine;
 skip preparation here. Runtime conversion needs no PyTorch and works offline
 after setup. Keep the `.xml`, `.bin`, and provenance `.json` files together.
 
+## Qt6 GUI
+
+```bash
+uv run --extra gui arc-sbs-gui
+```
+
+Choose input/output video, layout, depth processing and Arc/CPU acceleration.
+The window shows progress and supports cancellation; conversion runs in an
+isolated worker. See [GUI usage](docs/GUI.md). A prepared OpenVINO model is required.
+The GUI dependency is optional and the CLI works without it.
+
+For the follow-up on interactive images, see [measured image feasibility](docs/IMAGE_FEASIBILITY.md).
+
 ## Convert
 
 ```bash
@@ -93,7 +106,7 @@ Existing local GPU artifacts include `artifacts/gpu-1080p-half-sbs.mp4`,
 `artifacts/gpu-1080p-3s-sbs.mp4`, `artifacts/gpu-natural-full-sbs.mp4`, and
 `artifacts/gpu-stereo-preview.jpg`. Media, models, and caches are excluded from Git.
 The procedural demo tests plumbing; the natural sample tests a static scene.
-Neither is a representative moving-film quality benchmark. The 49 tests pass
+Neither is a representative moving-film quality benchmark. The backend tests pass
 on this A770; GPU tests skip on hosts without it. Full-resolution natural-scene
 parity and demo decoding can be checked with
 `uv run python scripts/validate_gpu_renderer.py` after creating the local media.

@@ -25,6 +25,9 @@ implements a generic independent depth-image-based rendering baseline.
   used to execute the original OpenCL stereo kernels. The GPU implementation
   uses standard OpenCL atomics and memory operations; it is independent of
   VisionDepth3D.
+- **PySide6-Essentials / Qt6:** optional GUI dependency, installed separately
+  under upstream LGPL/GPL terms recorded in its package metadata. No Qt binaries
+  are vendored in this repository.
 - **FFmpeg:** invoked as an external executable. Its LGPL/GPL licensing depends
   on the build; no FFmpeg binary is bundled. See [FFmpeg legal](https://ffmpeg.org/legal.html).
 - **NumPy, OpenCV, PyTorch, Transformers, Hugging Face Hub:** installed separately

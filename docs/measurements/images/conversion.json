@@ -1,0 +1,168 @@
+{
+  "scope": "Preloaded BGR image -> depth -> SBS -> owned Qt QImage. No file write, encoder, audio, actual Qt window presentation, headset upload or camera capture. Three warmups excluded.",
+  "device": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+  "execution_devices": [
+    "GPU.1"
+  ],
+  "model_shape": [
+    294,
+    518
+  ],
+  "startup_seconds": 0.8106082209997112,
+  "openvino_compile_seconds": 0.7282926410116488,
+  "source_jpeg_read_seconds": 0.010839772003237158,
+  "cases": [
+    {
+      "input_size": [
+        1920,
+        1080
+      ],
+      "layout": "half",
+      "depth_processing": "full",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 34.590558797935955,
+        "normalization": 12.78589660214493,
+        "stereo": 17.654181648686063,
+        "qt_image_copy": 0.8817106019705534,
+        "total": 65.9123476507375
+      },
+      "total_p50_ms": 67.43205150269205,
+      "total_p95_ms": 80.97717244672822,
+      "equivalent_serial_fps": 15.171664121249227
+    },
+    {
+      "input_size": [
+        1920,
+        1080
+      ],
+      "layout": "half",
+      "depth_processing": "sampled",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 32.05908729869407,
+        "normalization": 5.218378901918186,
+        "stereo": 12.500045548949856,
+        "qt_image_copy": 0.8675100514665246,
+        "total": 50.64502180102863
+      },
+      "total_p50_ms": 48.98917149694171,
+      "total_p95_ms": 66.45247666237992,
+      "equivalent_serial_fps": 19.745277313311163
+    },
+    {
+      "input_size": [
+        1920,
+        1080
+      ],
+      "layout": "full",
+      "depth_processing": "full",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 38.31673230160959,
+        "normalization": 12.469172948476626,
+        "stereo": 17.96261600247817,
+        "qt_image_copy": 1.796610897872597,
+        "total": 70.54513215043698
+      },
+      "total_p50_ms": 67.9915165019338,
+      "total_p95_ms": 84.931711354875,
+      "equivalent_serial_fps": 14.175322513642858
+    },
+    {
+      "input_size": [
+        1920,
+        1080
+      ],
+      "layout": "full",
+      "depth_processing": "sampled",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 35.87538619831321,
+        "normalization": 4.630369052028982,
+        "stereo": 15.75152605000767,
+        "qt_image_copy": 1.7375402494508307,
+        "total": 57.99482154980069
+      },
+      "total_p50_ms": 56.87125000258675,
+      "total_p95_ms": 74.1869847966882,
+      "equivalent_serial_fps": 17.242918820627644
+    },
+    {
+      "input_size": [
+        3840,
+        2160
+      ],
+      "layout": "half",
+      "depth_processing": "full",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 33.83316765102791,
+        "normalization": 53.1353902995761,
+        "stereo": 22.362838651315542,
+        "qt_image_copy": 2.0918541988066863,
+        "total": 111.42325080072624
+      },
+      "total_p50_ms": 111.29764500219608,
+      "total_p95_ms": 124.89447524276329,
+      "equivalent_serial_fps": 8.974787513500567
+    },
+    {
+      "input_size": [
+        3840,
+        2160
+      ],
+      "layout": "half",
+      "depth_processing": "sampled",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 32.82573659962509,
+        "normalization": 18.97994304963504,
+        "stereo": 22.467003099882277,
+        "qt_image_copy": 2.082738749595592,
+        "total": 76.355421498738
+      },
+      "total_p50_ms": 75.95326299633598,
+      "total_p95_ms": 94.30123860001915,
+      "equivalent_serial_fps": 13.096646975048497
+    },
+    {
+      "input_size": [
+        3840,
+        2160
+      ],
+      "layout": "full",
+      "depth_processing": "full",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 31.820249051088467,
+        "normalization": 54.314270000031684,
+        "stereo": 29.326620147912763,
+        "qt_image_copy": 6.40622275241185,
+        "total": 121.86736195144476
+      },
+      "total_p50_ms": 117.16225649433909,
+      "total_p95_ms": 142.6803107613523,
+      "equivalent_serial_fps": 8.205642462322496
+    },
+    {
+      "input_size": [
+        3840,
+        2160
+      ],
+      "layout": "full",
+      "depth_processing": "sampled",
+      "iterations": 20,
+      "mean_ms": {
+        "inference": 27.061761148070218,
+        "normalization": 34.86351415049285,
+        "stereo": 27.33378445118433,
+        "qt_image_copy": 9.954564251529519,
+        "total": 99.21362400127691
+      },
+      "total_p50_ms": 95.14215250237612,
+      "total_p95_ms": 120.50176265693155,
+      "equivalent_serial_fps": 10.079260888475655
+    }
+  ]
+}
