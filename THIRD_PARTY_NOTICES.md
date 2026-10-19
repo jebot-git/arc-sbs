@@ -28,6 +28,13 @@ implements a generic independent depth-image-based rendering baseline.
 - **PySide6-Essentials / Qt6:** optional GUI dependency, installed separately
   under upstream LGPL/GPL terms recorded in its package metadata. No Qt binaries
   are vendored in this repository.
+- **qimgv:** the separate image-viewer integration is based on
+  [easymodo/qimgv](https://github.com/easymodo/qimgv) revision
+  `3127a2d211b124ad4fcf853d01e6df9323bdfdc3`, licensed under GPLv3.
+  `integrations/qimgv/qimgv-sbs.patch` contains modifications to that application
+  and is covered by [its GPLv3 license](integrations/qimgv/LICENSE), rather than
+  this repository's MIT license. qimgv is built separately and communicates with
+  the independent converter through a child-process protocol.
 - **FFmpeg:** invoked as an external executable. Its LGPL/GPL licensing depends
   on the build; no FFmpeg binary is bundled. See [FFmpeg legal](https://ffmpeg.org/legal.html).
 - **NumPy, OpenCV, PyTorch, Transformers, Hugging Face Hub:** installed separately

@@ -26,6 +26,9 @@ def main():
                        *(root / 'packaging' / name for name in
                          ('install.py', 'arc-sbs.svg', 'runtime-requirements.txt', 'INSTALL.md'))]:
             shutil.copy2(source, staging / source.name)
+        # Optional native viewer integration carries its own GPLv3 patch/license.
+        shutil.copytree(root / 'integrations/qimgv', staging / 'qimgv',
+                        ignore=shutil.ignore_patterns('__pycache__'))
         with tarfile.open(bundle, 'w:gz') as archive:
             archive.add(staging, arcname=staging.name)
     for artifact in (wheel, root / f'dist/arc_sbs-{version}.tar.gz', bundle):

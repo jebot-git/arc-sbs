@@ -23,6 +23,12 @@ switches the `current` symlink after package validation; older releases remain
 available for rollback. This is a per-user Python installation, not an RPM.
 The package has no dependency on the source checkout.
 
+For still images with automatic output to an active WiVRn/WayVR session, the
+bundle includes an optional qimgv integration. After installing Arc SBS, run
+`python3 qimgv/install.py`, then `~/.local/bin/qimgv-sbs photo.jpg`. That helper
+downloads pinned upstream qimgv sources and needs compiler/CMake, Qt6 development
+packages (base/Svg/tools/Test), and Exiv2 development files. See `qimgv/README.md`.
+
 Models go in `$XDG_DATA_HOME/arc-sbs/models` (default `~/.local/share`), and
 OpenVINO caches in `$XDG_CACHE_HOME/arc-sbs/openvino` (default `~/.cache`).
 `ARC_SBS_MODEL` overrides the default model path; GUI model selections persist

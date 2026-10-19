@@ -33,10 +33,18 @@ The application menu also contains **Arc SBS**. The installer uses an isolated,
 versioned environment under `~/.local/opt/arc-sbs`, copies the prepared model to
 user data storage, and creates launchers in `~/.local/bin`. Add that directory
 to PATH if needed. The installed app runs independently of this checkout.
-The bundle in `dist/arc-sbs-0.2.0-linux-user.tar.gz` includes locked, hashed
+The bundle in `dist/arc-sbs-0.3.0-linux-user.tar.gz` includes locked, hashed
 dependency requirements; installation needs network access for Python packages.
 Model weights and system GPU drivers are not bundled. See
 [installation, upgrades and removal](packaging/INSTALL.md).
+
+## Images in qimgv and XR
+
+The [qimgv integration](integrations/qimgv/README.md) adds asynchronous still-image
+conversion and a dedicated SBS display in the connected WiVRn/WayVR session.
+Install it after Arc SBS 0.3.0, then run `qimgv-sbs photo.jpg`. F8 toggles SBS;
+`--sbs` also enables local SBS display while disconnected. The model stays loaded
+between images and qimgv remains responsive during conversion.
 
 ## Development setup
 

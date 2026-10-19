@@ -1,0 +1,710 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 451397fa..d0a20cd7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -77,6 +77,19 @@ endif()
+ 
+ add_subdirectory(qimgv)
+ 
++option(SBS_TESTS "Build stereo canvas and asynchronous conversion tests" OFF)
++if(SBS_TESTS)
++    enable_testing()
++    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Test)
++    add_executable(test_sbs qimgv/tests/test_sbs.cpp
++        qimgv/components/sbscontroller.cpp qimgv/gui/viewers/stereowindow.cpp)
++    target_include_directories(test_sbs PRIVATE qimgv)
++    target_compile_features(test_sbs PRIVATE cxx_std_17)
++    target_link_libraries(test_sbs PRIVATE Qt${QT_VERSION_MAJOR}::Test Qt${QT_VERSION_MAJOR}::Widgets)
++    add_test(NAME sbs COMMAND test_sbs)
++    set_tests_properties(sbs PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
++endif()
++
+ if(VIDEO_SUPPORT)
+     add_subdirectory(plugins/player_mpv)
+ endif()
+diff --git a/SBS_XR.md b/SBS_XR.md
+new file mode 100644
+index 00000000..19a0365e
+--- /dev/null
++++ b/SBS_XR.md
+@@ -0,0 +1,66 @@
++# SBS images in an active XR session
++
++This local branch is based on easymodo/qimgv at
++`3127a2d211b124ad4fcf853d01e6df9323bdfdc3` and remains GPLv3.
++The separate Arc SBS image worker uses the official pinned Depth Anything V2
++Small model with Intel A770 OpenVINO/OpenCL acceleration.
++
++Install Arc SBS 0.3.0 first. The default worker Python is
++`~/.local/opt/arc-sbs/current/venv/bin/python`; override with
++`QIMGV_SBS_PYTHON=/absolute/path/to/python`. Models and OpenVINO caches follow
++the Arc SBS user-data paths. No proprietary VisionDepth3D code is used.
++
++```bash
++qimgv-sbs /path/to/image.jpg       # automatic XR output when connected
++qimgv-sbs --sbs /path/to/image.jpg # also show local SBS if disconnected
++qimgv-sbs --no-sbs image.jpg       # ordinary qimgv behavior
++```
++
++F8 or **Toggle SBS / XR output** in the context menu toggles conversion. In
++automatic mode, a connected headset makes the initial toggle disable output;
++without a connected headset it enables the local SBS preview. Continue navigating
++with qimgv's usual controls in its main window. Each still image is converted
++asynchronously. Rapid navigation retains only the latest pending image; obsolete
++results do not replace the displayed image. The worker keeps its model compiled
++across images. Processing delay is expected, especially on the first image.
++
++Automatic XR output currently supports **WiVRn + WayVR**, as installed on this
++workstation. Both WiVRn `HeadsetConnected` and `SessionRunning` must be true. It
++creates its own WayVR surface with `left_right`, `stereo_full_frame=false`, using
++a squeezed canvas with separately fitted eyes and symmetric margins. It leaves
++the runtime and other overlays running. The presenter updates the same surface
++after subsequent conversions; disabling SBS hides it and closing qimgv terminates
++its owned presenter. Connection state is checked every three seconds while idle.
++
++Only static, SDR images are converted; animations/videos stay in the regular
++viewer and hide the image overlay. qimgv supplies its oriented/edited pixels,
++composited on black. Images are limited to a 3840-pixel longest edge and rounded
++to even dimensions. Internal intermediate output is full SBS; the 2560×1440 XR
++surface uses half-SBS transport. This prototype estimates hidden surfaces and
++can show edge/fill artifacts. Actual through-headset perception needs user review.
++
++Existing full-SBS images can be shown without depth conversion:
++
++```bash
++qimgv-sbs --sbs-present /path/to/full-sbs.png
++```
++
++This internal presentation mode watches atomically replaced files and uses a
++fullscreen squeezed SBS canvas. It does not start an XR session by itself.
++
++Build with Qt6 Widgets/Svg/PrintSupport/OpenGLWidgets, LinguistTools and Exiv2
++development packages:
++
++```bash
++cmake -S . -B build -DUSE_QT5=OFF -DVIDEO_SUPPORT=OFF \
++  -DOPENCV_SUPPORT=OFF -DSBS_TESTS=ON -DCMAKE_BUILD_TYPE=Release \
++  -DCMAKE_INSTALL_PREFIX="$HOME/.local/opt/qimgv-sbs"
++cmake --build build --parallel 8
++ctest --test-dir build --output-on-failure
++cmake --install build
++```
++
++This local build disables optional mpv video and OpenCV scaling support because
++their development packages are absent. The installed system qimgv is retained.
++See the companion Arc SBS repository's `integrations/qimgv` for the pinned patch
++and reproducible installer.
+diff --git a/qimgv/components/CMakeLists.txt b/qimgv/components/CMakeLists.txt
+index 871e01f9..feeaefa3 100644
+--- a/qimgv/components/CMakeLists.txt
++++ b/qimgv/components/CMakeLists.txt
+@@ -1,6 +1,7 @@
+ ## SOURCES FOR QIMGV COMPONENTS
+ 
+ target_sources(qimgv PRIVATE
++    sbscontroller.cpp
+     directorymodel.cpp
+     directorypresenter.cpp
+ 
+diff --git a/qimgv/components/actionmanager/actionmanager.cpp b/qimgv/components/actionmanager/actionmanager.cpp
+index f8f0408b..90cc97b3 100644
+--- a/qimgv/components/actionmanager/actionmanager.cpp
++++ b/qimgv/components/actionmanager/actionmanager.cpp
+@@ -19,6 +19,7 @@ ActionManager *ActionManager::getInstance() {
+ }
+ //------------------------------------------------------------------------------
+ void ActionManager::initDefaults() {
++    actionManager->defaults.insert("F8", "toggleSbs");
+     actionManager->defaults.insert("Right", "nextImage");
+     actionManager->defaults.insert("Left", "prevImage");
+     actionManager->defaults.insert("XButton2", "nextImage");
+@@ -105,6 +106,10 @@ void ActionManager::initShortcuts() {
+     if(actionManager->shortcuts.isEmpty()) {
+         actionManager->resetDefaults();
+     }
++    // Add the new binding without replacing customized existing shortcuts.
++    if(!actionManager->shortcuts.contains("F8") &&
++            !actionManager->shortcuts.values().contains("toggleSbs"))
++        actionManager->shortcuts.insert("F8", "toggleSbs");
+ }
+ //------------------------------------------------------------------------------
+ void ActionManager::addShortcut(const QString &keys, const QString &action) {
+diff --git a/qimgv/components/actionmanager/actionmanager.h b/qimgv/components/actionmanager/actionmanager.h
+index d4833769..8b673061 100644
+--- a/qimgv/components/actionmanager/actionmanager.h
++++ b/qimgv/components/actionmanager/actionmanager.h
+@@ -54,6 +54,7 @@ private:
+     ActionType validateAction(const QString &actionName);
+ 
+ signals:
++    void toggleSbs();
+     void open();
+     void save();
+     void saveAs();
+diff --git a/qimgv/components/sbscontroller.cpp b/qimgv/components/sbscontroller.cpp
+new file mode 100644
+index 00000000..94e1aba7
+--- /dev/null
++++ b/qimgv/components/sbscontroller.cpp
+@@ -0,0 +1,164 @@
++#include "sbscontroller.h"
++#include <QCoreApplication>
++#include <QDir>
++#include <QFile>
++#include <QJsonDocument>
++#include <QPainter>
++#include <QStandardPaths>
++
++SbsController::SbsController(QObject *parent) : QObject(parent) {
++    poll.setInterval(3000);
++    connect(&poll, &QTimer::timeout, this, &SbsController::dispatch);
++    connect(&worker, &QProcess::started, this, &SbsController::dispatch);
++    connect(&worker, &QProcess::readyReadStandardOutput, this, &SbsController::readResponse);
++    connect(&worker, &QProcess::readyReadStandardError, this, [this] {
++        qWarning().noquote() << "SBS worker:" << worker.readAllStandardError().trimmed();
++    });
++    connect(&worker, &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
++        if(!stopping) emit failed(tr("SBS worker: ") + worker.errorString());
++    });
++    connect(&worker, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this](int, QProcess::ExitStatus) {
++        busy = false;
++        poll.stop();
++        if(!stopping) emit failed(tr("SBS converter exited. Check the installed Arc SBS runtime; toggle SBS to retry."));
++    });
++}
++
++SbsController::~SbsController() {
++    stopping = true;
++    poll.stop();
++    if(worker.state() != QProcess::NotRunning) {
++        worker.write("{\"action\":\"quit\"}\n");
++        worker.closeWriteChannel();
++        if(!worker.waitForFinished(2000)) {
++            worker.terminate();
++            if(!worker.waitForFinished(1000)) { worker.kill(); worker.waitForFinished(1000); }
++        }
++    }
++}
++
++void SbsController::setMode(const QString &mode) {
++    currentMode = mode;
++    ++generation;
++    hidePending = true;
++    if(preview) preview->hide();
++    if(mode == "off") { poll.stop(); if(!busy) dispatch(); }
++    else if(!source.isNull()) ensureWorker();
++}
++
++void SbsController::setSource(const QImage &image) {
++    source = image;
++    ++generation;
++    if(source.isNull()) {
++        hidePending = true;
++        if(preview) preview->hide();
++        if(!busy) dispatch();
++    } else if(currentMode != "off") ensureWorker();
++}
++
++void SbsController::ensureWorker() {
++    if(!temporary.isValid()) { emit failed(tr("Cannot create SBS working directory")); return; }
++    if(worker.state() == QProcess::NotRunning) {
++        QString python = qEnvironmentVariable("QIMGV_SBS_PYTHON");
++        if(python.isEmpty()) python = QDir::homePath() + "/.local/opt/arc-sbs/current/venv/bin/python";
++        if(!QFile::exists(python)) python = QStandardPaths::findExecutable("python3");
++        buffer.clear();
++        busy = false;
++        worker.start(python, {"-u", "-m", "arc_sbs.image_worker"});
++    } else dispatch();
++    poll.start();
++}
++
++void SbsController::send(const QJsonObject &request) {
++    busy = true;
++    worker.write(QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n');
++}
++
++void SbsController::dispatch() {
++    if(stopping || busy || worker.state() != QProcess::Running) return;
++    if(hidePending) {
++        hidePending = false;
++        send({{"action", "hide"}});
++    } else if(currentMode != "off" && !source.isNull() && completed != generation) {
++        // Snapshot qimgv's already oriented/edited image, not the file on disk.
++        QImage scaled = source;
++        if(source.width() > 3840 || source.height() > 3840)
++            scaled = source.scaled(3840, 3840, Qt::KeepAspectRatio, Qt::SmoothTransformation);
++        QImage flattened(scaled.size(), QImage::Format_RGB888);
++        flattened.fill(Qt::black);
++        { QPainter painter(&flattened); painter.drawImage(0, 0, scaled); }
++        const QString input = temporary.filePath("input.png");
++        if(!flattened.save(input, "PNG")) {
++            completed = generation;
++            emit failed(tr("Cannot save image for SBS conversion"));
++            return;
++        }
++        emit message(tr("Preparing SBS image…"));
++        send({{"action", "convert"}, {"id", qint64(generation)}, {"mode", currentMode},
++              {"input", input}, {"output", temporary.filePath(QString::number(generation) + ".png")}});
++    } else if(currentMode != "off" && !source.isNull()) send({{"action", "probe"}});
++}
++
++void SbsController::readResponse() {
++    buffer += worker.readAllStandardOutput();
++    int newline;
++    while((newline = buffer.indexOf('\n')) >= 0) {
++        const auto line = buffer.left(newline);
++        buffer.remove(0, newline + 1);
++        QJsonParseError error;
++        auto document = QJsonDocument::fromJson(line, &error);
++        if(error.error != QJsonParseError::NoError || !document.isObject()) {
++            busy = false;
++            emit failed(tr("Invalid response from SBS converter"));
++            continue;
++        }
++        busy = false;
++        response(document.object());
++    }
++}
++
++void SbsController::showPreview() {
++    if(!preview) preview = std::make_unique<StereoWindow>();
++    if(preview->setImage(QImage(currentOutput))) preview->show();
++}
++
++void SbsController::response(const QJsonObject &result) {
++    const QString action = result["action"].toString();
++    const quint64 id = result["id"].toVariant().toULongLong();
++    const bool wasConnected = connected;
++    if(result.contains("connected")) connected = result["connected"].toBool();
++    if(action == "convert" && id != generation) {
++        QFile::remove(temporary.filePath(QString::number(id) + ".png"));
++        dispatch(); // latest image wins; obsolete results never get presented
++        return;
++    }
++    if(result["status"] == "error") {
++        completed = generation;
++        emit failed(tr("SBS: ") + result["error"].toString());
++        if(action == "present" && currentMode == "always") showPreview();
++        return;
++    }
++    if(action == "convert") {
++        completed = generation;
++        if(result["status"] == "skipped") return;
++        if(!currentOutput.isEmpty()) QFile::remove(currentOutput);
++        currentOutput = result["output"].toString();
++        qInfo().noquote() << "SBS image ready:" << result["device"].toString()
++                          << "seconds:" << result["seconds"].toDouble();
++        emit converted(generation, currentOutput);
++        if(connected) {
++            if(preview) preview->hide();
++            send({{"action", "present"}, {"id", qint64(generation)}, {"output", currentOutput},
++                  {"display", temporary.filePath("display.png")},
++                  {"presenter", QCoreApplication::applicationFilePath()}});
++        } else if(currentMode == "always") showPreview();
++    } else if(action == "probe") {
++        if(connected && !wasConnected) { ++generation; dispatch(); }
++        else if(!connected && wasConnected && currentMode == "always" && !currentOutput.isEmpty()) showPreview();
++    } else if(action == "present") {
++        qInfo().noquote() << "SBS XR output:" << result["overlay"].toString() << "connected:" << connected;
++        emit message(connected ? tr("SBS image displayed in XR") : tr("Headset disconnected"));
++        if(!connected && currentMode == "always") showPreview();
++    } else if(action == "hide") dispatch();
++    if(hidePending || (currentMode != "off" && completed != generation)) dispatch();
++}
+diff --git a/qimgv/components/sbscontroller.h b/qimgv/components/sbscontroller.h
+new file mode 100644
+index 00000000..e7acf069
+--- /dev/null
++++ b/qimgv/components/sbscontroller.h
+@@ -0,0 +1,41 @@
++#pragma once
++#include <QImage>
++#include <QJsonObject>
++#include <QObject>
++#include <QProcess>
++#include <QTemporaryDir>
++#include <QTimer>
++#include <memory>
++#include "gui/viewers/stereowindow.h"
++
++class SbsController : public QObject {
++    Q_OBJECT
++public:
++    explicit SbsController(QObject *parent = nullptr);
++    ~SbsController();
++    void setMode(const QString &mode);
++    QString mode() const { return currentMode; }
++    bool headsetConnected() const { return connected; }
++    void setSource(const QImage &image);
++signals:
++    void message(const QString &text);
++    void failed(const QString &text);
++    void converted(quint64 generation, const QString &file);
++private:
++    QProcess worker;
++    QTemporaryDir temporary;
++    QTimer poll;
++    std::unique_ptr<StereoWindow> preview;
++    QImage source;
++    QByteArray buffer;
++    QString currentMode = "auto";
++    QString currentOutput;
++    quint64 generation = 0, completed = 0;
++    bool busy = false, connected = false, hidePending = false, stopping = false;
++    void ensureWorker();
++    void dispatch();
++    void send(const QJsonObject &request);
++    void readResponse();
++    void response(const QJsonObject &result);
++    void showPreview();
++};
+diff --git a/qimgv/core.cpp b/qimgv/core.cpp
+index 2183e48d..cc6fdab5 100644
+--- a/qimgv/core.cpp
++++ b/qimgv/core.cpp
+@@ -76,6 +76,13 @@ void Core::initComponents() {
+ }
+ 
+ void Core::connectComponents() {
++    connect(&sbs, &SbsController::message, mw, qOverload<QString>(&MW::showMessage));
++    connect(&sbs, &SbsController::failed, mw, &MW::showError);
++    connect(actionManager, &ActionManager::toggleSbs, this, [this] {
++        const bool active = sbs.mode() == "always" || (sbs.mode() == "auto" && sbs.headsetConnected());
++        sbs.setMode(active ? "off" : "always");
++        mw->showMessage(sbs.mode() == "off" ? tr("SBS disabled") : tr("SBS enabled"));
++    });
+     thumbPanelPresenter.setView(mw->getThumbnailPanel());
+     connect(&thumbPanelPresenter, &DirectoryPresenter::fileActivated,
+             this, &Core::onDirectoryViewFileActivated);
+@@ -1203,6 +1210,7 @@ void Core::onScalingFinished(QPixmap *scaled, ScalerRequest req) {
+ 
+ // reset state; clear cache; etc
+ void Core::reset() {
++    sbs.setSource(QImage());
+     state.hasActiveImage = false;
+     state.currentFilePath = "";
+     model->setDirectory("");
+@@ -1500,10 +1508,15 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
+     DocumentType type = img->type();
+     if(type == STATIC) {
+         mw->showImage(img->getPixmap());
++        auto still = dynamic_cast<ImageStatic *>(img.get());
++        const auto pixels = still ? still->getImage() : nullptr;
++        sbs.setSource(pixels ? *pixels : QImage());
+     } else if(type == ANIMATED) {
++        sbs.setSource(QImage());
+         auto animated = dynamic_cast<ImageAnimated *>(img.get());
+         mw->showAnimation(animated->getMovie());
+     } else if(type == VIDEO) {
++        sbs.setSource(QImage());
+         auto video = dynamic_cast<Video *>(img.get());
+         // workaround for mpv. If we play video while mainwindow is hidden we get black screen.
+         // affects only initial startup (e.g. we open webm from file manager)
+diff --git a/qimgv/core.h b/qimgv/core.h
+index 85e597b1..ab944ea4 100644
+--- a/qimgv/core.h
++++ b/qimgv/core.h
+@@ -16,6 +16,7 @@
+ #include "gui/mainwindow.h"
+ #include "utils/randomizer.h"
+ #include "gui/dialogs/printdialog.h"
++#include "components/sbscontroller.h"
+ 
+ #ifdef __GLIBC__
+ #include <malloc.h>
+@@ -39,6 +40,7 @@ class Core : public QObject {
+ public:
+     Core();
+     void showGui();
++    void setSbsMode(const QString &mode) { sbs.setMode(mode); }
+ 
+ public slots:
+     void updateInfoString();
+@@ -59,6 +61,7 @@ private:
+     MW *mw;
+ 
+     State state;
++    SbsController sbs;
+     bool loopSlideshow, slideshow, shuffle;
+     FolderEndAction folderEndAction;
+ 
+diff --git a/qimgv/gui/CMakeLists.txt b/qimgv/gui/CMakeLists.txt
+index 9794bd87..2cc7e2b8 100644
+--- a/qimgv/gui/CMakeLists.txt
++++ b/qimgv/gui/CMakeLists.txt
+@@ -1,6 +1,7 @@
+ ## SOURCES FOR QIMGV GUI
+ 
+ target_sources(qimgv PRIVATE
++    viewers/stereowindow.cpp
+     centralwidget.cpp
+     contextmenu.cpp
+     flowlayout.cpp
+diff --git a/qimgv/gui/contextmenu.cpp b/qimgv/gui/contextmenu.cpp
+index e635c2ae..f34239f2 100644
+--- a/qimgv/gui/contextmenu.cpp
++++ b/qimgv/gui/contextmenu.cpp
+@@ -83,6 +83,8 @@ ContextMenu::ContextMenu(QWidget *parent) :
+ 
+     ui->settings->setAction("openSettings");
+     ui->settings->setText(tr("Settings"));
++    ui->stereo->setAction("toggleSbs");
++    ui->stereo->setText(tr("Toggle SBS / XR output"));
+     ui->settings->setIconPath(":/res/icons/common/menuitem/settings16.png");
+     // -------------------------------------------------------------------------
+     ui->openWith->setText(tr("Open with..."));
+diff --git a/qimgv/gui/contextmenu.ui b/qimgv/gui/contextmenu.ui
+index f5a81dca..7931c2aa 100644
+--- a/qimgv/gui/contextmenu.ui
++++ b/qimgv/gui/contextmenu.ui
+@@ -504,6 +504,9 @@
+          <item>
+           <widget class="ContextMenuItem" name="settings" native="true"/>
+          </item>
++         <item>
++          <widget class="ContextMenuItem" name="stereo" native="true"/>
++         </item>
+          <item>
+           <spacer name="verticalSpacer_4">
+            <property name="orientation">
+diff --git a/qimgv/gui/viewers/stereowindow.cpp b/qimgv/gui/viewers/stereowindow.cpp
+new file mode 100644
+index 00000000..e28196b9
+--- /dev/null
++++ b/qimgv/gui/viewers/stereowindow.cpp
+@@ -0,0 +1,58 @@
++#include "stereowindow.h"
++#include <QFileInfo>
++#include <QDateTime>
++#include <QKeyEvent>
++#include <QPainter>
++
++StereoWindow::StereoWindow(QWidget *parent) : QWidget(parent) {
++    setWindowTitle(tr("qimgv — SBS image"));
++    resize(1280, 720);
++    setMinimumSize(200, 100);
++    timer.setInterval(150);
++    connect(&timer, &QTimer::timeout, this, [this] {
++        QFileInfo file(path);
++        // Atomic rename changes metadata even when the path stays the same.
++        const qint64 stamp = file.lastModified().toMSecsSinceEpoch();
++        if(file.exists() && stamp != modified) {
++            QImage next(path);
++            if(setImage(next)) modified = stamp;
++        }
++        // The owner removes this directory on exit. Do not leave orphan viewers.
++        if(!QFileInfo(file.absolutePath()).exists()) close();
++    });
++}
++
++bool StereoWindow::setImage(const QImage &next) {
++    if(next.isNull() || next.width() % 2) return false;
++    image = next;
++    update();
++    return true;
++}
++
++void StereoWindow::watchFile(const QString &file) {
++    path = file;
++    modified = -1;
++    timer.start();
++    QMetaObject::invokeMethod(&timer, "timeout", Qt::QueuedConnection);
++}
++
++void StereoWindow::paintEvent(QPaintEvent *) {
++    QPainter painter(this);
++    painter.fillRect(rect(), Qt::black);
++    if(image.isNull()) return;
++    painter.setRenderHint(QPainter::SmoothPixmapTransform);
++    const int eyeWidth = image.width() / 2;
++    const QSizeF fitted = QSizeF(eyeWidth, image.height()).scaled(QSizeF(width(), height()), Qt::KeepAspectRatio);
++    for(int eye = 0; eye < 2; ++eye) {
++        const QRectF source(eye * eyeWidth, 0, eyeWidth, image.height());
++        const QRectF target(eye * width() / 2.0 + (width() - fitted.width()) / 4.0,
++                            (height() - fitted.height()) / 2.0, fitted.width() / 2.0, fitted.height());
++        painter.drawImage(target, image, source);
++    }
++}
++
++void StereoWindow::keyPressEvent(QKeyEvent *event) {
++    if(event->key() == Qt::Key_Escape) close();
++    else if(event->key() == Qt::Key_F11) isFullScreen() ? showNormal() : showFullScreen();
++    else QWidget::keyPressEvent(event);
++}
+diff --git a/qimgv/gui/viewers/stereowindow.h b/qimgv/gui/viewers/stereowindow.h
+new file mode 100644
+index 00000000..58bc7e57
+--- /dev/null
++++ b/qimgv/gui/viewers/stereowindow.h
+@@ -0,0 +1,22 @@
++#pragma once
++#include <QImage>
++#include <QTimer>
++#include <QWidget>
++
++// Each eye is fitted independently before squeezing into half the surface.
++// WayVR must use left_right with stereo_full_frame=false for this canvas.
++class StereoWindow : public QWidget {
++    Q_OBJECT
++public:
++    explicit StereoWindow(QWidget *parent = nullptr);
++    bool setImage(const QImage &image);
++    void watchFile(const QString &path);
++protected:
++    void paintEvent(QPaintEvent *) override;
++    void keyPressEvent(QKeyEvent *event) override;
++private:
++    QImage image;
++    QTimer timer;
++    QString path;
++    qint64 modified = -1;
++};
+diff --git a/qimgv/main.cpp b/qimgv/main.cpp
+index 0aa9604f..6fb78042 100644
+--- a/qimgv/main.cpp
++++ b/qimgv/main.cpp
+@@ -133,9 +133,25 @@ int main(int argc, char *argv[]) {
+             QCoreApplication::translate("main", "thumbnail-size")},
+         {"build-options",
+             QCoreApplication::translate("main", "Show build options.")},
++        {"sbs", "Convert still images to SBS; display in connected WayVR or a local stereo window."},
++        {"no-sbs", "Disable automatic SBS output to a connected headset."},
++        {"sbs-present", "Present an existing full-SBS image on a squeezed stereo surface (internal XR viewer).", "image"},
++        {"sbs-title", "Unique title for an XR stereo overlay.", "title"},
++        {"sbs-present-encoded", "Internal XR presenter: base64-encoded UTF-8 image path.", "base64"},
+     });
+     parser.process(a);
+ 
++    if(parser.isSet("sbs-present") || parser.isSet("sbs-present-encoded")) {
++        StereoWindow window;
++        if(parser.isSet("sbs-title")) window.setWindowTitle(parser.value("sbs-title"));
++        const QString image = parser.isSet("sbs-present-encoded")
++            ? QString::fromUtf8(QByteArray::fromBase64(parser.value("sbs-present-encoded").toLatin1()))
++            : parser.value("sbs-present");
++        window.watchFile(image);
++        window.showFullScreen();
++        return a.exec();
++    }
++
+     if(parser.isSet("build-options")) {
+         CmdOptionsRunner r;
+         QTimer::singleShot(0, &r, &CmdOptionsRunner::showBuildOptions);
+@@ -154,6 +170,7 @@ int main(int argc, char *argv[]) {
+ // -----------------------------------------------------------------------------
+ 
+     Core core;
++    core.setSbsMode(parser.isSet("no-sbs") ? "off" : parser.isSet("sbs") ? "always" : "auto");
+ 
+ #ifdef __APPLE__
+     QObject::connect(&a, &MacOSApplication::fileOpened, &core, &Core::loadPath);
+diff --git a/qimgv/tests/test_sbs.cpp b/qimgv/tests/test_sbs.cpp
+new file mode 100644
+index 00000000..62ddf97c
+--- /dev/null
++++ b/qimgv/tests/test_sbs.cpp
+@@ -0,0 +1,93 @@
++#include <QtTest>
++#include <QPainter>
++#include <QTemporaryDir>
++#include "components/sbscontroller.h"
++#include "gui/viewers/stereowindow.h"
++
++class TestSbs : public QObject {
++    Q_OBJECT
++private slots:
++    void presenterReloadsAtomicFilesAndClosesWithOwner() {
++        QTemporaryDir directory;
++        const QString path = directory.filePath("display.png");
++        QImage frame(80, 40, QImage::Format_RGB32);
++        frame.fill(Qt::red);
++        QVERIFY(frame.save(path));
++        StereoWindow window;
++        window.resize(400, 200);
++        window.watchFile(path);
++        window.show();
++        QTRY_COMPARE_WITH_TIMEOUT(window.grab().toImage().pixelColor(100, 100), QColor(Qt::red), 1000);
++        QTest::qWait(20);
++        frame.fill(Qt::blue);
++        const QString next = directory.filePath("next.png");
++        QVERIFY(frame.save(next));
++        QVERIFY(QFile::remove(path));
++        QVERIFY(QFile::rename(next, path));
++        QTRY_COMPARE_WITH_TIMEOUT(window.grab().toImage().pixelColor(100, 100), QColor(Qt::blue), 1000);
++        QVERIFY(directory.remove());
++        QTRY_VERIFY_WITH_TIMEOUT(!window.isVisible(), 1000);
++    }
++
++    void canvasSeparatesEyesAndCentersPortraits() {
++        StereoWindow window;
++        window.resize(400, 200);
++        QImage image(80, 400, QImage::Format_RGB32);
++        image.fill(Qt::red);
++        { QPainter p(&image); p.fillRect(40, 0, 40, 400, Qt::blue); }
++        QVERIFY(window.setImage(image));
++        window.show();
++        QTest::qWait(20);
++        QImage capture = window.grab().toImage();
++        QCOMPARE(capture.pixelColor(100, 100), QColor(Qt::red));
++        QCOMPARE(capture.pixelColor(300, 100), QColor(Qt::blue));
++        QCOMPARE(capture.pixelColor(199, 100), QColor(Qt::black));
++        QCOMPARE(capture.pixelColor(200, 100), QColor(Qt::black));
++        QCOMPARE(capture.pixelColor(50, 100), QColor(Qt::black));
++        QCOMPARE(capture.pixelColor(250, 100), QColor(Qt::black));
++        QVERIFY(!window.setImage(QImage(81, 40, QImage::Format_RGB32)));
++    }
++
++    void coalescesNavigationAndSuppressesDisabledResults() {
++        QTemporaryDir directory;
++        const QString script = directory.filePath("fake-python");
++        QFile file(script);
++        QVERIFY(file.open(QIODevice::WriteOnly));
++        file.write("#!/usr/bin/python3\nimport sys,json,time,shutil\n"
++                   "for line in sys.stdin:\n"
++                   " r=json.loads(line); action=r.get('action')\n"
++                   " if action=='quit': break\n"
++                   " if action=='convert':\n"
++                   "  time.sleep(.25); shutil.copyfile(r['input'],r['output'])\n"
++                   " print(json.dumps(dict(r,status='ok',connected=False)),flush=True)\n");
++        file.close();
++        QVERIFY(file.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
++        qputenv("QIMGV_SBS_PYTHON", script.toUtf8());
++        {
++            SbsController controller;
++            QSignalSpy ready(&controller, &SbsController::converted);
++            QSignalSpy messages(&controller, &SbsController::message);
++            QSignalSpy errors(&controller, &SbsController::failed);
++            controller.setMode("always");
++            QImage image(60, 40, QImage::Format_RGB32);
++            image.fill(Qt::red);
++            controller.setSource(image);
++            QTRY_VERIFY_WITH_TIMEOUT(messages.count() > 0, 2000);
++            image.fill(Qt::blue);
++            controller.setSource(image);
++            QTRY_COMPARE_WITH_TIMEOUT(ready.count(), 1, 3000);
++            const QString output = ready.first()[1].toString();
++            QCOMPARE(QImage(output).pixelColor(10, 10), QColor(Qt::blue));
++            QCOMPARE(errors.count(), 0);
++            image.fill(Qt::green);
++            controller.setSource(image);
++            controller.setMode("off");
++            QTest::qWait(700);
++            QCOMPARE(ready.count(), 1);
++        }
++        qunsetenv("QIMGV_SBS_PYTHON");
++    }
++};
++
++QTEST_MAIN(TestSbs)
++#include "test_sbs.moc"
+diff --git a/qimgv/utils/actions.cpp b/qimgv/utils/actions.cpp
+index 35ba2059..19942798 100644
+--- a/qimgv/utils/actions.cpp
++++ b/qimgv/utils/actions.cpp
+@@ -21,6 +21,7 @@ QList<QString> Actions::getList() {
+ }
+ 
+ void Actions::init() {
++    mActions.insert("toggleSbs", QVersionNumber(1,0,3));
+     mActions.insert("nextImage", QVersionNumber(0,6,2));
+     mActions.insert("prevImage", QVersionNumber(0,6,2));
+     mActions.insert("toggleFullscreen", QVersionNumber(0,6,2));
