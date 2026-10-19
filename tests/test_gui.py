@@ -12,6 +12,8 @@ os.environ['QT_QPA_PLATFORM']='offscreen'
 from PySide6.QtCore import QSettings, QTimer
 from PySide6.QtWidgets import QApplication
 from arc_sbs.gui import ConversionWindow
+from PySide6.QtCore import QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 
 @pytest.fixture(scope='module')
@@ -66,6 +68,46 @@ def configure(w,media,tmp_path):
     w.output_path.setText(str(tmp_path/'result.mp4'))
     w.acceleration.setCurrentIndex(w.acceleration.findData('CPU'))
     w.frame_limit.setValue(5)
+
+
+def test_input_file_drop_decodes_paths_suggests_output_and_preserves_custom_destination(window, tmp_path, app):
+    source = tmp_path / 'a movie #1 ü.mp4'
+    source.touch()
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(source))])
+    enter = QDragEnterEvent(QPoint(2, 2), Qt.DropAction.CopyAction, mime,
+                            Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    app.sendEvent(window.input_path, enter)
+    assert enter.isAccepted()
+    drop = QDropEvent(QPointF(2, 2), Qt.DropAction.CopyAction, mime,
+                      Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    app.sendEvent(window.input_path, drop)
+    assert drop.isAccepted()
+    assert window.input_path.text() == str(source)
+    assert window.output_path.text() == str(source.with_name(source.stem + '_sbs.mp4'))
+    window.output_path.setText(str(tmp_path / 'custom.mkv'))
+    window.dropEvent(QDropEvent(QPointF(2, 2), Qt.DropAction.CopyAction, mime,
+                               Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))
+    assert window.output_path.text().endswith('custom.mkv')
+
+
+@pytest.mark.parametrize('kind', ['remote', 'directory', 'multiple', 'active', 'move_only'])
+def test_input_drop_rejects_unsupported_imports(window, tmp_path, kind):
+    source = tmp_path / 'video.mp4'; source.touch()
+    mime = QMimeData()
+    urls = [QUrl.fromLocalFile(str(source))]
+    if kind == 'remote': urls = [QUrl('https://example.com/video.mp4')]
+    if kind == 'directory': urls = [QUrl.fromLocalFile(str(tmp_path))]
+    if kind == 'multiple': urls *= 2
+    if kind == 'active': window.active = True
+    mime.setUrls(urls)
+    action = Qt.DropAction.MoveAction if kind == 'move_only' else Qt.DropAction.CopyAction
+    drop = QDropEvent(QPointF(2, 2), action, mime,
+                      Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    window.dropEvent(drop)
+    assert not drop.isAccepted()
+    assert not window.input_path.text()
+    window.active = False
 
 
 def test_gui_validates_missing_input_and_protects_existing_output(window,gui_media,tmp_path):

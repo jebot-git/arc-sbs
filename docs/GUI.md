@@ -4,6 +4,11 @@ After local installation, launch **Arc SBS** from the application menu or run
 `~/.local/bin/arc-sbs-gui`. Installed models default to
 `~/.local/share/arc-sbs/models/depth-small.xml` (respects `XDG_DATA_HOME`).
 The optional first argument prefills the input video.
+Drop one local video onto the input field or the window to select it. File URLs
+are decoded correctly, including spaces, Unicode and `#`. Output suggestions
+update while preserving a manually selected destination. Drops never move the
+source file. Remote URLs, folders, multiple files and drops during conversion
+are rejected.
 
 For development, launch from the project directory:
 

@@ -33,7 +33,7 @@ The application menu also contains **Arc SBS**. The installer uses an isolated,
 versioned environment under `~/.local/opt/arc-sbs`, copies the prepared model to
 user data storage, and creates launchers in `~/.local/bin`. Add that directory
 to PATH if needed. The installed app runs independently of this checkout.
-The bundle in `dist/arc-sbs-0.3.0-linux-user.tar.gz` includes locked, hashed
+The bundle in `dist/arc-sbs-0.4.0-linux-user.tar.gz` includes locked, hashed
 dependency requirements; installation needs network access for Python packages.
 Model weights and system GPU drivers are not bundled. See
 [installation, upgrades and removal](packaging/INSTALL.md).
@@ -43,7 +43,7 @@ Model weights and system GPU drivers are not bundled. See
 The [qimgvr fork](https://github.com/jebot-git/qimgvr) provides asynchronous
 still-image conversion and a dedicated SBS display in the connected WiVRn/WayVR
 session, with mpv, OpenCV, Exiv2 and KDE support.
-Install it after Arc SBS 0.3.0, then run `qimgvr photo.jpg`. F8 toggles SBS;
+Install it after Arc SBS 0.4.0, then run `qimgvr photo.jpg`. F8 toggles SBS;
 `--sbs` also enables local SBS display while disconnected. The model stays loaded
 between images and qimgv remains responsive during conversion.
 
@@ -183,3 +183,16 @@ PyTorch resolves from its CPU wheel index for the export tool.
 
 Original project code: MIT. Model weights and external tools retain their own
 licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+
+### DomeD and existing SBS images
+
+qimgvr 1.2.0 supports optional DomeD output using the image worker's
+`--xr-backend domed` adapter. Enable it using qimgvr's `scripts/install-domed.py`;
+it changes only Dome's default image associations. Active Dome XR sessions receive
+an owned SBS window on the XR socket, with separate per-eye composition layers.
+
+The image worker recognizes SBS/HSBS filename tokens, JPEG JPS descriptors and PNG
+sTER metadata. JPS/PNS extension fallback uses right-first eye order; LR/PARALLEL
+markers select left-first. Existing stereo bypasses depth inference, including
+when the model is unavailable. qimgvr F9 and `--input-layout` override detection.
+Unmarked wide images remain 2D. Video conversion behavior is unchanged.

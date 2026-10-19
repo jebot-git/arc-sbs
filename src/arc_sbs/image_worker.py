@@ -12,6 +12,7 @@ import sys
 import time
 
 from .paths import model_path
+from .image_layout import detect_layout, file_metadata
 from .xr import WayVROutput, headset_connected
 
 
@@ -24,7 +25,8 @@ class ImageConverter:
         self.estimator = None
         self.renderer = None
 
-    def convert(self, source, output, strength=.025, convergence=.5):
+    def convert(self, source, output, strength=.025, convergence=.5,
+                source_name='', metadata=None, input_layout='auto'):
         import cv2
         import numpy as np
         from .depth import DepthEstimator, DepthNormalizer
@@ -32,6 +34,26 @@ class ImageConverter:
         frame = cv2.imread(str(source), cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError(f'Cannot decode image: {source}')
+        metadata = {**file_metadata(source_name or str(source)), **(metadata or {})}
+        layout, swap, reason = detect_layout(source_name or str(source), metadata, input_layout)
+        if layout != '2d':
+            if input_layout == 'auto' and metadata.get('stereo-eye-width'):
+                eye = max(1, round(frame.shape[1] * int(metadata['stereo-eye-width']) / int(metadata['stereo-image-width'])))
+                left, right = frame[:, :eye], frame[:, -eye:]
+            elif frame.shape[1] % 2:
+                raise ValueError('An SBS image must have an even width; select 2D if this is not stereo')
+            else:
+                left, right = np.split(frame, 2, axis=1)
+            if swap:
+                left, right = right, left
+            if layout == 'half-sbs':
+                left = cv2.resize(left, (left.shape[1] * 2, left.shape[0]), interpolation=cv2.INTER_CUBIC)
+                right = cv2.resize(right, (right.shape[1] * 2, right.shape[0]), interpolation=cv2.INTER_CUBIC)
+            sbs = np.concatenate((left, right), axis=1)
+            self.write(output, sbs)
+            return {'output': str(output), 'size': [sbs.shape[1], sbs.shape[0]],
+                    'input_layout': layout, 'recognition': reason, 'depth_bypassed': True,
+                    'device': 'pre-existing stereo image', 'seconds': time.perf_counter() - started}
         h, w = frame.shape[:2]
         scale = min(1, self.max_edge / max(w, h))
         width, height = max(2, round(w * scale / 2) * 2), max(2, round(h * scale / 2) * 2)
@@ -49,6 +71,17 @@ class ImageConverter:
         # Each photograph gets independent bounds, including same-scene images.
         depth = DepthNormalizer(smoothing=0, sampled=True).apply(self.estimator.infer(frame), frame)
         sbs = self.renderer.render(frame, depth, strength=strength, convergence=convergence, layout='full')
+        self.write(output, sbs)
+        return {'output': str(output), 'size': [sbs.shape[1], sbs.shape[0]],
+                'input_layout': '2d', 'recognition': reason, 'depth_bypassed': False,
+                'device': self.estimator.device_name, 'model': str(self.model),
+                'model_shape': [self.estimator.height, self.estimator.width],
+                'renderer': self.renderer.info, 'seconds': time.perf_counter() - started}
+
+    @staticmethod
+    def write(output, sbs):
+        import cv2
+        import numpy as np
         output = Path(output)
         temporary = output.with_name(output.name + '.part.png')
         try:
@@ -57,14 +90,11 @@ class ImageConverter:
             temporary.replace(output)
         finally:
             temporary.unlink(missing_ok=True)
-        return {'output': str(output), 'size': [sbs.shape[1], sbs.shape[0]],
-                'device': self.estimator.device_name, 'model': str(self.model),
-                'model_shape': [self.estimator.height, self.estimator.width],
-                'renderer': self.renderer.info, 'seconds': time.perf_counter() - started}
 
 
-def serve(converter, stream, emit, xr=None):
+def serve(converter, stream, emit, xr=None, connected=None):
     xr = xr or WayVROutput()
+    is_connected = connected or headset_connected
     try:
         for line in stream:
             request = {}
@@ -78,7 +108,7 @@ def serve(converter, stream, emit, xr=None):
                 if action == 'quit':
                     break
                 if action == 'probe':
-                    result['connected'] = headset_connected()
+                    result['connected'] = is_connected()
                     if not result['connected']:
                         # The compositor can disappear as part of disconnection.
                         # Still report disconnected so reconnect triggers a new image.
@@ -89,21 +119,22 @@ def serve(converter, stream, emit, xr=None):
                 elif action == 'hide':
                     xr.hide()
                 elif action == 'present':
-                    connected = headset_connected()
-                    result['connected'] = connected
-                    if connected:
+                    active = is_connected()
+                    result['connected'] = active
+                    if active:
                         target = Path(request['display'])
                         temporary = target.with_name(target.name + '.new')
                         shutil.copyfile(request['output'], temporary)
                         temporary.replace(target)
                         result['overlay'] = xr.present(request['presenter'], target)
                 elif action == 'convert':
-                    connected = headset_connected()
-                    result['connected'] = connected
-                    if request.get('mode') == 'auto' and not connected:
+                    active = is_connected()
+                    result['connected'] = active
+                    if request.get('mode') == 'auto' and not active:
                         result['status'] = 'skipped'
                     else:
-                        result.update(converter.convert(request['input'], request['output']))
+                        options = {key: request[key] for key in ('source_name', 'metadata', 'input_layout') if key in request}
+                        result.update(converter.convert(request['input'], request['output'], **options))
                 else:
                     raise ValueError(f'Unknown action: {action}')
                 emit(result)
@@ -119,13 +150,20 @@ def main():
     parser.add_argument('--model', type=Path, default=model_path())
     parser.add_argument('--device', default='ARC')
     parser.add_argument('--renderer', choices=['opencl', 'cpu'], default='opencl')
+    parser.add_argument('--xr-backend', choices=['wayvr', 'domed'], default='wayvr')
     args = parser.parse_args()
     protocol = sys.stdout
     def emit(value):
         protocol.write(json.dumps(value) + '\n')
         protocol.flush()
+    options = vars(args)
+    backend = options.pop('xr_backend')
+    xr = None
+    if backend == 'domed':
+        from .domed import DomeDOutput
+        xr = DomeDOutput()
     with contextlib.redirect_stdout(sys.stderr):
-        serve(ImageConverter(**vars(args)), sys.stdin, emit)
+        serve(ImageConverter(**options), sys.stdin, emit, xr, xr.connected if xr else None)
 
 
 if __name__ == '__main__':

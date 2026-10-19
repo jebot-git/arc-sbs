@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 try:
-    from PySide6.QtCore import QProcess, QSettings, QTimer, QUrl, Qt, Signal
+    from PySide6.QtCore import QEvent, QProcess, QSettings, QTimer, QUrl, Qt, Signal
     from PySide6.QtGui import QDesktopServices
     from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
         QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
@@ -66,12 +66,18 @@ class ConversionWindow(QMainWindow):
         form.setContentsMargins(0, 0, 0, 0)
         form.setSpacing(10)
         self.input_path, row = self._path_row('Choose an input video', self._browse_input)
+        self.input_path.setPlaceholderText('Choose a video or drop one here')
+        self.input_path.setAcceptDrops(True)
+        self.input_path.installEventFilter(self)
+        self.setAcceptDrops(True)
         form.addRow('Input video', row)
         self.output_path, row = self._path_row('Choose an .mp4 or .mkv destination', self._browse_output)
+        self.output_path.setAcceptDrops(False)
         form.addRow('Output video', row)
         self.overwrite = QCheckBox('Replace existing output')
         form.addRow('', self.overwrite)
         self.model_path, row = self._path_row('OpenVINO depth model (.xml)', self._browse_model)
+        self.model_path.setAcceptDrops(False)
         self.model_path.setText(self.settings.value('model', default_model(), type=str))
         form.addRow('Depth model', row)
         self.layout_choice = QComboBox()
@@ -164,6 +170,7 @@ class ConversionWindow(QMainWindow):
         self.log_toggle.toggled.connect(lambda visible: self.log.setVisible(visible))
         root.addWidget(self.log_toggle)
         self.log = QPlainTextEdit()
+        self.log.setAcceptDrops(False)
         self.log.setReadOnly(True)
         self.log.setMaximumBlockCount(300)
         self.log.setMaximumHeight(170)
@@ -414,6 +421,40 @@ class ConversionWindow(QMainWindow):
             event.ignore()
         else:
             event.accept()
+
+    def _drop_input(self, event):
+        mime = event.mimeData()
+        urls = mime.urls() if mime.hasUrls() else []
+        valid = (not self.active and len(urls) == 1 and urls[0].isLocalFile()
+                 and Path(urls[0].toLocalFile()).is_file()
+                 and bool(event.possibleActions() & Qt.DropAction.CopyAction))
+        if not valid:
+            event.ignore()
+            return
+        # Import a path; never acknowledge a move that could remove the source.
+        event.setDropAction(Qt.DropAction.CopyAction)
+        event.accept()
+        if event.type() == QEvent.Type.Drop:
+            source = Path(urls[0].toLocalFile()).absolute()
+            self.input_path.setText(str(source))
+            self.settings.setValue('input_dir', str(source.parent))
+            self._suggest_output()
+
+    def eventFilter(self, target, event):
+        if target is self.input_path and event.type() in (
+                QEvent.Type.DragEnter, QEvent.Type.DragMove, QEvent.Type.Drop):
+            self._drop_input(event)
+            return True
+        return super().eventFilter(target, event)
+
+    def dragEnterEvent(self, event):
+        self._drop_input(event)
+
+    def dragMoveEvent(self, event):
+        self._drop_input(event)
+
+    def dropEvent(self, event):
+        self._drop_input(event)
 
 
 def main():
