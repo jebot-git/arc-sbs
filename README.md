@@ -33,7 +33,7 @@ The application menu also contains **Arc SBS**. The installer uses an isolated,
 versioned environment under `~/.local/opt/arc-sbs`, copies the prepared model to
 user data storage, and creates launchers in `~/.local/bin`. Add that directory
 to PATH if needed. The installed app runs independently of this checkout.
-The bundle in `dist/arc-sbs-0.4.0-linux-user.tar.gz` includes locked, hashed
+The bundle in `dist/arc-sbs-0.4.1-linux-user.tar.gz` includes locked, hashed
 dependency requirements; installation needs network access for Python packages.
 Model weights and system GPU drivers are not bundled. See
 [installation, upgrades and removal](packaging/INSTALL.md).
@@ -43,7 +43,7 @@ Model weights and system GPU drivers are not bundled. See
 The [qimgvr fork](https://github.com/jebot-git/qimgvr) provides asynchronous
 still-image conversion and a dedicated SBS display in the connected WiVRn/WayVR
 session, with mpv, OpenCV, Exiv2 and KDE support.
-Install it after Arc SBS 0.4.0, then run `qimgvr photo.jpg`. F8 toggles SBS;
+Install it after Arc SBS 0.4.1, then run `qimgvr photo.jpg`. F8 toggles SBS;
 `--sbs` also enables local SBS display while disconnected. The model stays loaded
 between images and qimgv remains responsive during conversion.
 
@@ -196,3 +196,15 @@ sTER metadata. JPS/PNS extension fallback uses right-first eye order; LR/PARALLE
 markers select left-first. Existing stereo bypasses depth inference, including
 when the model is unavailable. qimgvr F9 and `--input-layout` override detection.
 Unmarked wide images remain 2D. Video conversion behavior is unchanged.
+
+### Transparent still images
+
+Arc SBS 0.4.1 with qimgvr 1.2.1 preserves BGRA/PNG alpha through existing-SBS
+bypass and CPU/A770 still-image warping. Input scaling and half-SBS packing use
+premultiplied filtering; PNG storage remains straight alpha. Fully invisible
+pixels participate only as the farthest background, so they cannot cover visible
+geometry. Depth inference receives RGB composited on black, never hidden RGB or
+an extra alpha channel. The presenter uses transparent margins and alpha-capable
+Wayland buffers. Input 16-bit PNG samples are quantized to 8-bit SDR. Alpha means
+coverage; the model does not simulate refraction or layered glass. The BGR video
+pipeline remains unchanged.

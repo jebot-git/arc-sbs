@@ -14,6 +14,7 @@ import time
 from .paths import model_path
 from .image_layout import detect_layout, file_metadata
 from .xr import WayVROutput, headset_connected
+from .alpha import resize_image
 
 
 class ImageConverter:
@@ -31,9 +32,15 @@ class ImageConverter:
         import numpy as np
         from .depth import DepthEstimator, DepthNormalizer
         started = time.perf_counter()
-        frame = cv2.imread(str(source), cv2.IMREAD_COLOR)
+        frame = cv2.imread(str(source), cv2.IMREAD_UNCHANGED)
         if frame is None:
             raise ValueError(f'Cannot decode image: {source}')
+        if frame.dtype == np.uint16:
+            frame = np.rint(frame.astype(np.float32) / 257).astype(np.uint8)
+        if frame.ndim == 2:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        if frame.dtype != np.uint8 or frame.ndim != 3 or frame.shape[2] not in (3, 4):
+            raise ValueError('Expected an 8/16-bit RGB or RGBA still image')
         metadata = {**file_metadata(source_name or str(source)), **(metadata or {})}
         layout, swap, reason = detect_layout(source_name or str(source), metadata, input_layout)
         if layout != '2d':
@@ -47,8 +54,8 @@ class ImageConverter:
             if swap:
                 left, right = right, left
             if layout == 'half-sbs':
-                left = cv2.resize(left, (left.shape[1] * 2, left.shape[0]), interpolation=cv2.INTER_CUBIC)
-                right = cv2.resize(right, (right.shape[1] * 2, right.shape[0]), interpolation=cv2.INTER_CUBIC)
+                left = resize_image(left, (left.shape[1] * 2, left.shape[0]), cv2.INTER_CUBIC)
+                right = resize_image(right, (right.shape[1] * 2, right.shape[0]), cv2.INTER_CUBIC)
             sbs = np.concatenate((left, right), axis=1)
             self.write(output, sbs)
             return {'output': str(output), 'size': [sbs.shape[1], sbs.shape[0]],
@@ -58,7 +65,7 @@ class ImageConverter:
         scale = min(1, self.max_edge / max(w, h))
         width, height = max(2, round(w * scale / 2) * 2), max(2, round(h * scale / 2) * 2)
         if (width, height) != (w, h):
-            frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+            frame = resize_image(frame, (width, height), cv2.INTER_AREA)
         if self.estimator is None:
             self.estimator = DepthEstimator(self.model, self.device)
         if self.renderer is None:
@@ -69,7 +76,12 @@ class ImageConverter:
                 from .stereo import CPURenderer
                 self.renderer = CPURenderer()
         # Each photograph gets independent bounds, including same-scene images.
-        depth = DepthNormalizer(smoothing=0, sampled=True).apply(self.estimator.infer(frame), frame)
+        # The model consumes RGB only; alpha is coverage, not an extra feature.
+        # Hidden RGB under fully transparent pixels must not influence depth.
+        rgb = frame[:, :, :3]
+        if frame.shape[2] == 4:
+            rgb = np.rint(rgb.astype(np.float32) * (frame[:, :, 3:4] / 255)).astype(np.uint8)
+        depth = DepthNormalizer(smoothing=0, sampled=True).apply(self.estimator.infer(rgb), rgb)
         sbs = self.renderer.render(frame, depth, strength=strength, convergence=convergence, layout='full')
         self.write(output, sbs)
         return {'output': str(output), 'size': [sbs.shape[1], sbs.shape[0]],

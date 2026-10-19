@@ -1,6 +1,7 @@
 """Generic forward depth-image-based rendering with a nearest-surface z-buffer."""
 import cv2
 import numpy as np
+from .alpha import half_width, visibility_depth
 
 
 def warp_eye(frame, depth, shift):
@@ -13,9 +14,10 @@ def warp_eye(frame, depth, shift):
     zbuffer = np.full(h*w, -np.inf, dtype=np.float32)
     np.maximum.at(zbuffer, dest, depth[valid])
     visible = depth[valid] >= zbuffer[dest]
-    out = np.zeros_like(frame).reshape(-1, 3)
+    channels = frame.shape[2]
+    out = np.zeros_like(frame).reshape(-1, channels)
     out[dest[visible]] = frame[valid][visible]
-    out = out.reshape(h, w, 3)
+    out = out.reshape(h, w, channels)
     zbuffer = zbuffer.reshape(h, w)
     occupied = np.isfinite(zbuffer)
     # Fill newly exposed horizontal strips from the farther valid surface.
@@ -37,6 +39,7 @@ def render_sbs(frame, depth, strength=0.025, convergence=0.5, layout="half", swa
     right-eye feature (crossed disparity / in front of the screen).
     """
     validate_inputs(frame, depth, strength, convergence, layout)
+    depth = visibility_depth(frame, depth)
     h, w = frame.shape[:2]
     disparity = (np.clip(depth, 0, 1)-convergence) * (strength*w)
     left = warp_eye(frame, depth, disparity*0.5)
@@ -44,14 +47,14 @@ def render_sbs(frame, depth, strength=0.025, convergence=0.5, layout="half", swa
     if swap:
         left, right = right, left
     if layout == "half":
-        left = cv2.resize(left, (w//2, h), interpolation=cv2.INTER_AREA)
-        right = cv2.resize(right, (w//2, h), interpolation=cv2.INTER_AREA)
+        left = half_width(left)
+        right = half_width(right)
     return np.concatenate((left, right), axis=1)
 
 
 def validate_inputs(frame, depth, strength, convergence, layout):
-    if frame.ndim != 3 or frame.shape[2] != 3 or frame.dtype != np.uint8:
-        raise ValueError("Frame must be an HxWx3 uint8 BGR array")
+    if frame.ndim != 3 or frame.shape[2] not in (3, 4) or frame.dtype != np.uint8:
+        raise ValueError("Frame must be an HxWx3 BGR or HxWx4 BGRA uint8 array")
     h, w = frame.shape[:2]
     if h <= 0 or w <= 0:
         raise ValueError("Frame dimensions must be positive")

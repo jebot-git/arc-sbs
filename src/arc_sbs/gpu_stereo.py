@@ -11,6 +11,7 @@ import numpy as np
 import pyopencl as cl
 
 from .stereo import validate_inputs
+from .alpha import visibility_depth
 
 
 def gpu_devices():
@@ -52,18 +53,19 @@ class OpenCLRenderer:
         validate_inputs(frame, depth, strength, convergence, layout)
         h, w = frame.shape[:2]
         n = h*w
-        if n > (2**31-1)//6:
+        if n > (2**31-1)//(2*frame.shape[2]):
             raise ValueError("Image is too large for the renderer's signed indices")
         frame = np.ascontiguousarray(frame)
-        depth = np.ascontiguousarray(depth, dtype=np.float32)
-        if self.shape != (h, w):
+        depth = np.ascontiguousarray(visibility_depth(frame, depth), dtype=np.float32)
+        channels = frame.shape[2]
+        if self.shape != (h, w, channels):
             flags = cl.mem_flags
-            self.frame = cl.Buffer(self.context, flags.READ_ONLY, 3*n)
+            self.frame = cl.Buffer(self.context, flags.READ_ONLY, channels*n)
             self.depth = cl.Buffer(self.context, flags.READ_ONLY, 4*n)
             self.keys = cl.Buffer(self.context, flags.READ_WRITE, 16*n)
-            self.output = cl.Buffer(self.context, flags.WRITE_ONLY, 6*n)
-            self.shape = (h, w)
-        output = np.empty((h, w if layout == "half" else 2*w, 3), dtype=np.uint8)
+            self.output = cl.Buffer(self.context, flags.WRITE_ONLY, 2*channels*n)
+            self.shape = (h, w, channels)
+        output = np.empty((h, w if layout == "half" else 2*w, channels), dtype=np.uint8)
         # In-order queue guarantees uploads -> clear -> splat -> pack -> read.
         # Keep input arrays alive through the blocking output copy below.
         cl.enqueue_copy(self.queue, self.frame, frame, is_blocking=False)
@@ -73,6 +75,6 @@ class OpenCLRenderer:
                    np.float32(strength*w), np.float32(convergence))
         self.pack(self.queue, (output.shape[0]*output.shape[1],), None,
                   self.frame, self.depth, self.keys, self.output, np.int32(w), np.int32(h),
-                  np.int32(layout == "half"), np.int32(bool(swap)))
+                  np.int32(layout == "half"), np.int32(bool(swap)), np.int32(channels))
         cl.enqueue_copy(self.queue, output, self.output, is_blocking=True)
         return output

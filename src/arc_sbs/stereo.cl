@@ -58,7 +58,7 @@ int resolve(__global const ulong *keys, __global const float *depth,
 __kernel void pack(__global const uchar *frame, __global const float *depth,
                    __global const ulong *keys, __global uchar *output,
                    const int width, const int height, const int half_sbs,
-                   const int swap) {
+                   const int swap, const int channels) {
     int eye_width = half_sbs ? width/2 : width;
     int out_width = 2*eye_width;
     int i = get_global_id(0);
@@ -69,9 +69,26 @@ __kernel void pack(__global const uchar *frame, __global const float *depth,
     x %= eye_width;
     int a = resolve(keys, depth, eye, half_sbs ? x*2 : x, y, width, width*height);
     int b = half_sbs ? resolve(keys, depth, eye, x*2+1, y, width, width*height) : a;
-    for (int c = 0; c < 3; ++c) {
-        float va = a < 0 ? 0.0f : (float)frame[3*a+c];
-        float vb = b < 0 ? 0.0f : (float)frame[3*b+c];
-        output[3*i+c] = convert_uchar_sat_rte((va+vb)*0.5f);
+    if (channels == 4 && half_sbs) {
+        uint aa = a < 0 ? 0 : frame[4*a+3];
+        uint ab = b < 0 ? 0 : frame[4*b+3];
+        uchar alpha = convert_uchar_sat_rte((float)(aa+ab)*0.5f);
+        output[4*i+3] = alpha;
+        for (int c = 0; c < 3; ++c) {
+            uint va = a < 0 ? 0 : frame[4*a+c];
+            uint vb = b < 0 ? 0 : frame[4*b+c];
+            uint denominator = max(aa+ab, 1U);
+            uint numerator = va*aa+vb*ab;
+            uint q = numerator/denominator, r = numerator%denominator;
+            // Integer ties-to-even avoids device-dependent float division at .5.
+            q += 2*r > denominator || (2*r == denominator && (q & 1));
+            output[4*i+c] = alpha ? (uchar)q : 0;
+        }
+    } else {
+        for (int c = 0; c < channels; ++c) {
+            float va = a < 0 ? 0.0f : (float)frame[channels*a+c];
+            float vb = b < 0 ? 0.0f : (float)frame[channels*b+c];
+            output[channels*i+c] = convert_uchar_sat_rte((va+vb)*0.5f);
+        }
     }
 }

@@ -77,3 +77,18 @@ def test_gpu_preserves_sub_ulp_offsets_around_half_pixels_at_hd_width(gpu_render
     depth = np.full((2,1920),np.float32(0.020833367),dtype=np.float32)
     np.testing.assert_array_equal(gpu_renderer.render(frame,depth,layout=layout),
                                   render_sbs(frame,depth,layout=layout))
+
+
+@pytest.mark.parametrize('layout', ['half', 'full'])
+@pytest.mark.parametrize('swap', [False, True])
+def test_gpu_preserves_bgra_visibility_and_alpha_weighted_half_sbs(gpu_renderer, layout, swap):
+    rng = np.random.default_rng(1801)
+    for channels in (3, 4, 3, 4):  # reallocate channel-dependent buffers safely
+        frame = rng.integers(0, 256, (16, 160, channels), dtype=np.uint8)
+        if channels == 4:
+            frame[:, :30, 3] = 0
+            frame[::3, :, 3] = 0
+            frame[1::3, :, 3] = 128
+        depth = rng.random((16, 160), dtype=np.float32)
+        np.testing.assert_array_equal(gpu_renderer.render(frame, depth, strength=.1, layout=layout, swap=swap),
+                                      render_sbs(frame, depth, strength=.1, layout=layout, swap=swap))
