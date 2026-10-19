@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 import openvino as ov
 
+from .paths import cache_path
+
 MODEL_ID = "depth-anything/Depth-Anything-V2-Small-hf"
 MODEL_REVISION = "5426e4f0f36572d16453bbda7a8389317b1bef99"
 MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
@@ -45,7 +47,8 @@ def preprocess(frame, height, width):
 
 
 class DepthEstimator:
-    def __init__(self, model, device="ARC", cache_dir=".cache/openvino"):
+    def __init__(self, model, device="ARC", cache_dir=None):
+        cache_dir = cache_path() if cache_dir is None else cache_dir
         core = ov.Core()
         self.device = select_device(core, device)
         self.device_name = core.get_property(self.device, "FULL_DEVICE_NAME")

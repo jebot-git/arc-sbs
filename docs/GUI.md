@@ -1,6 +1,11 @@
 # Qt6 conversion GUI
 
-Launch from the project directory:
+After local installation, launch **Arc SBS** from the application menu or run
+`~/.local/bin/arc-sbs-gui`. Installed models default to
+`~/.local/share/arc-sbs/models/depth-small.xml` (respects `XDG_DATA_HOME`).
+The optional first argument prefills the input video.
+
+For development, launch from the project directory:
 
 ```bash
 uv run --extra gui arc-sbs-gui

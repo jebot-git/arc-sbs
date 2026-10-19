@@ -18,9 +18,8 @@ except ImportError as exc:
 
 
 def default_model():
-    candidates = [Path.cwd()/'models/depth-small.xml',
-                  Path(__file__).resolve().parents[2]/'models/depth-small.xml']
-    return str(next((p for p in candidates if p.exists()), candidates[0]))
+    from .paths import model_path
+    return str(model_path())
 
 
 class ConversionWindow(QMainWindow):
@@ -418,6 +417,10 @@ class ConversionWindow(QMainWindow):
 
 
 def main():
+    if sys.argv[1:] == ['--version']:
+        from . import __version__
+        print(f'Arc SBS {__version__}')
+        return 0
     app = QApplication(sys.argv)
     app.setApplicationName('Arc SBS')
     app.setOrganizationName('ArcSBS')

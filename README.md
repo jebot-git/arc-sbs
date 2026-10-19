@@ -17,7 +17,28 @@ code and uses the separately available Depth Anything V2 Small model. It does no
 contain or modify VisionDepth3D code, assets, or its custom stereo pipeline.
 See [provenance](THIRD_PARTY_NOTICES.md).
 
-## Setup
+## Local installation
+
+Build a wheel, source archive, and user-install bundle, then install the Qt6 GUI
+and command-line converter without root access:
+
+```bash
+uv lock --check
+python3 packaging/build.py
+python3 packaging/install.py --model models/depth-small.xml
+arc-sbs-gui
+```
+
+The application menu also contains **Arc SBS**. The installer uses an isolated,
+versioned environment under `~/.local/opt/arc-sbs`, copies the prepared model to
+user data storage, and creates launchers in `~/.local/bin`. Add that directory
+to PATH if needed. The installed app runs independently of this checkout.
+The bundle in `dist/arc-sbs-0.2.0-linux-user.tar.gz` includes locked, hashed
+dependency requirements; installation needs network access for Python packages.
+Model weights and system GPU drivers are not bundled. See
+[installation, upgrades and removal](packaging/INSTALL.md).
+
+## Development setup
 
 Requires Linux, Python 3.11–3.13, `uv`, FFmpeg/ffprobe with `libx264`, Intel
 OpenCL compute runtime for inference/rendering, and Intel media driver for

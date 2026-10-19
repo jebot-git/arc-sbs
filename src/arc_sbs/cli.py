@@ -9,6 +9,8 @@ import time
 import cv2
 import numpy as np
 
+from . import __version__
+from .paths import model_path
 from .depth import DepthEstimator, devices
 from .model import prepare_model
 from .video import convert
@@ -16,14 +18,15 @@ from .video import convert
 
 def parser():
     p = argparse.ArgumentParser(description="Intel Arc/OpenVINO 2D-to-SBS prototype")
+    p.add_argument("--version", action="version", version=f"Arc SBS {__version__}")
     commands = p.add_subparsers(dest="command", required=True)
     commands.add_parser("devices", help="List OpenVINO devices and FFmpeg availability")
     prep = commands.add_parser("prepare-model", help="Download official Small weights and export FP16 IR")
-    prep.add_argument("--output", type=Path, default=Path("models/depth-small.xml"))
+    prep.add_argument("--output", type=Path, default=model_path())
     prep.add_argument("--height", type=int, default=294)
     prep.add_argument("--width", type=int, default=518)
     bench = commands.add_parser("benchmark", help="Warm depth-only inference test on a fixed image")
-    bench.add_argument("--model", type=Path, default=Path("models/depth-small.xml"))
+    bench.add_argument("--model", type=Path, default=model_path())
     bench.add_argument("--device", default="ARC")
     bench.add_argument("--image", type=Path)
     bench.add_argument("--iterations", type=int, default=30)
@@ -38,7 +41,7 @@ def parser():
     conv = commands.add_parser("convert", help="Convert SDR video to full or half SBS")
     conv.add_argument("input", type=Path)
     conv.add_argument("output", type=Path)
-    conv.add_argument("--model", type=Path, default=Path("models/depth-small.xml"))
+    conv.add_argument("--model", type=Path, default=model_path())
     conv.add_argument("--renderer", choices=["cpu", "opencl"], default="opencl", help="Stereo rendering backend (default: A770 OpenCL)")
     conv.add_argument("--device", default="ARC", help="ARC selects A770 by name; or CPU/GPU.N")
     conv.add_argument("--layout", choices=["half", "full"], default="half")
