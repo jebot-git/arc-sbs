@@ -1,0 +1,19 @@
+{
+  "device": "CPU",
+  "device_name": "12th Gen Intel(R) Core(TM) i7-12700",
+  "iterations": 15,
+  "compile_seconds": 0.7211023660056526,
+  "mean_ms": 159.47334333322942,
+  "p50_ms": 152.73807900666725,
+  "p95_ms": 185.14912160317178,
+  "fps": 6.270640466290582,
+  "scope": "preprocessing + synchronous inference + resize; 3 warmups excluded",
+  "model_shape": [
+    294,
+    518
+  ],
+  "depth_range": [
+    2.3403234481811523,
+    3.8754234313964844
+  ]
+}

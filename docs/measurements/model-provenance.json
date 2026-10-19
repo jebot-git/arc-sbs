@@ -1,0 +1,19 @@
+{
+  "model_id": "depth-anything/Depth-Anything-V2-Small-hf",
+  "revision": "5426e4f0f36572d16453bbda7a8389317b1bef99",
+  "license": "Apache-2.0",
+  "shape": [
+    1,
+    3,
+    294,
+    518
+  ],
+  "near_is_large": true,
+  "preprocessing": "RGB /255 ImageNet normalization, replicate letterbox",
+  "openvino": "2026.4.1-22982-e213a147257-releases/2026/4",
+  "torch": "2.14.1+cpu",
+  "sha256": {
+    ".xml": "82e10b6f7ef9d83817fded3b1629dfddab745d7cb0d2bf50ab8816d2c99e8c41",
+    ".bin": "9b30867837f08a7d0afb3978eccdeb74169f21674b23450aac5d1e0fed400a14"
+  }
+}

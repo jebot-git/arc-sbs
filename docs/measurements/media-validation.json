@@ -1,0 +1,35 @@
+[
+  {
+    "file": "demo-half-sbs.mp4",
+    "size": [
+      640,
+      360
+    ],
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "duration": 3.0,
+    "full_decode_passed": true
+  },
+  {
+    "file": "natural-full-sbs.mp4",
+    "size": [
+      1920,
+      540
+    ],
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "duration": 2.0,
+    "full_decode_passed": true
+  },
+  {
+    "file": "demo-1080p-half-sbs.mp4",
+    "size": [
+      1920,
+      1080
+    ],
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "duration": 1.0,
+    "full_decode_passed": true
+  }
+]

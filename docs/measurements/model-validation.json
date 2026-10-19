@@ -1,0 +1,8 @@
+{
+  "device": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+  "model_revision": "5426e4f0f36572d16453bbda7a8389317b1bef99",
+  "rmse_over_reference_range": 0.00020882194803562015,
+  "pearson_correlation": 0.9999995696805097,
+  "passed": true,
+  "scope": "Pinned FP32 PyTorch vs FP16-weight OpenVINO on the same preprocessed image"
+}

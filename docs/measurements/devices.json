@@ -1,0 +1,18 @@
+{
+  "devices": [
+    {
+      "id": "CPU",
+      "name": "12th Gen Intel(R) Core(TM) i7-12700"
+    },
+    {
+      "id": "GPU.0",
+      "name": "Intel(R) UHD Graphics 770 (iGPU)"
+    },
+    {
+      "id": "GPU.1",
+      "name": "Intel(R) Arc(TM) A770 Graphics (dGPU)"
+    }
+  ],
+  "ffmpeg": "/usr/bin/ffmpeg",
+  "ffprobe": "/usr/bin/ffprobe"
+}

@@ -1,0 +1,22 @@
+{
+  "device": "GPU.1",
+  "device_name": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+  "execution_devices": [
+    "GPU.1"
+  ],
+  "iterations": 3,
+  "compile_seconds": 0.6117768170079216,
+  "mean_ms": 15.541020664386451,
+  "p50_ms": 15.292461001081392,
+  "p95_ms": 18.00366059615044,
+  "fps": 64.34583812706612,
+  "scope": "preprocessing + synchronous inference + resize; 3 warmups excluded",
+  "model_shape": [
+    294,
+    518
+  ],
+  "depth_range": [
+    2.3394103050231934,
+    3.8761510848999023
+  ]
+}

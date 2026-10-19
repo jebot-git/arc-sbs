@@ -1,0 +1,38 @@
+{
+  "input": "/home/blux/arc-sbs/artifacts/source.mp4",
+  "output": "/home/blux/arc-sbs/artifacts/limited-frame-check.mkv",
+  "frames": 5,
+  "source_fps": 24.0,
+  "duration_seconds": 0.20833333333333334,
+  "input_size": [
+    640,
+    360
+  ],
+  "output_size": [
+    1280,
+    360
+  ],
+  "layout": "full",
+  "eye_order": "left_right",
+  "strength": 0.025,
+  "convergence": 0.5,
+  "encoder": "h264_vaapi",
+  "vaapi_device": "/dev/dri/by-path/pci-0000:03:00.0-render",
+  "device": "GPU.1",
+  "device_name": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+  "execution_devices": [
+    "GPU.1"
+  ],
+  "model": "/home/blux/arc-sbs/models/depth-small.xml",
+  "model_shape": [
+    294,
+    518
+  ],
+  "compile_seconds": 0.5724972820025869,
+  "pipeline_seconds": 0.4976077559986152,
+  "pipeline_fps": 10.048074893780223,
+  "detected_scene_cuts": 0,
+  "depth_seconds": 0.10340233899478335,
+  "render_seconds": 0.16012279398273677,
+  "encode_write_seconds": 0.008183869984350167
+}
