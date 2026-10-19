@@ -28,10 +28,18 @@ def parser():
     bench.add_argument("--image", type=Path)
     bench.add_argument("--iterations", type=int, default=30)
     bench.add_argument("--report", type=Path)
+    render_bench = commands.add_parser("benchmark-render", help="Warm rendering-only test including GPU transfers")
+    render_bench.add_argument("--renderer", choices=["cpu", "opencl"], default="opencl")
+    render_bench.add_argument("--width", type=int, default=1920)
+    render_bench.add_argument("--height", type=int, default=1080)
+    render_bench.add_argument("--layout", choices=["half", "full"], default="half")
+    render_bench.add_argument("--iterations", type=int, default=30)
+    render_bench.add_argument("--report", type=Path)
     conv = commands.add_parser("convert", help="Convert SDR video to full or half SBS")
     conv.add_argument("input", type=Path)
     conv.add_argument("output", type=Path)
     conv.add_argument("--model", type=Path, default=Path("models/depth-small.xml"))
+    conv.add_argument("--renderer", choices=["cpu", "opencl"], default="opencl", help="Stereo rendering backend (default: A770 OpenCL)")
     conv.add_argument("--device", default="ARC", help="ARC selects A770 by name; or CPU/GPU.N")
     conv.add_argument("--layout", choices=["half", "full"], default="half")
     conv.add_argument("--strength", type=float, default=0.025, help="Disparity / source width, 0..0.1")
@@ -60,6 +68,12 @@ def main():
             raise ValueError("Report and video output paths must differ")
         if command == "devices":
             result = {"devices": devices(), "ffmpeg": shutil.which("ffmpeg"), "ffprobe": shutil.which("ffprobe")}
+            try:
+                from .gpu_stereo import gpu_devices
+                result["opencl_gpus"] = [{"name": d.name.strip(), "platform": d.platform.name,
+                                         "driver": d.driver_version} for d in gpu_devices()]
+            except Exception as exc:
+                result["opencl_error"] = str(exc)
         elif command == "prepare-model":
             result = prepare_model(args.pop("output"), **args)
         elif command == "benchmark":
@@ -84,6 +98,9 @@ def main():
                       "scope": "preprocessing + synchronous inference + resize; 3 warmups excluded",
                       "model_shape": [estimator.height, estimator.width],
                       "depth_range": [float(depth.min()),float(depth.max())]}
+        elif command == "benchmark-render":
+            from .benchmark import benchmark_render
+            result = benchmark_render(**args)
         elif command == "convert":
             result = convert(args.pop("input"), args.pop("output"), **args)
         elif command == "make-demo":

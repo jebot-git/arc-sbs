@@ -1,0 +1,43 @@
+{
+  "input": "/home/blux/arc-sbs/artifacts/source-1080p-3s.mp4",
+  "output": "/home/blux/arc-sbs/artifacts/cpu-1080p-3s-sbs.mp4",
+  "frames": 72,
+  "source_fps": 23.62193624178993,
+  "duration_seconds": 3.048014322916667,
+  "input_size": [
+    1920,
+    1080
+  ],
+  "output_size": [
+    1920,
+    1080
+  ],
+  "renderer": {
+    "backend": "cpu",
+    "device": "NumPy/OpenCV CPU",
+    "init_seconds": 0.0
+  },
+  "layout": "half",
+  "eye_order": "left_right",
+  "strength": 0.025,
+  "convergence": 0.5,
+  "encoder": "h264_vaapi",
+  "vaapi_device": "/dev/dri/by-path/pci-0000:03:00.0-render",
+  "device": "GPU.1",
+  "device_name": "Intel(R) Arc(TM) A770 Graphics (dGPU)",
+  "execution_devices": [
+    "GPU.1"
+  ],
+  "model": "/home/blux/arc-sbs/models/depth-small.xml",
+  "model_shape": [
+    294,
+    518
+  ],
+  "compile_seconds": 0.5861530459951609,
+  "pipeline_seconds": 27.59918494199519,
+  "pipeline_fps": 2.608772692067587,
+  "detected_scene_cuts": 0,
+  "depth_seconds": 2.1268546081264503,
+  "render_seconds": 24.20703837297333,
+  "encode_write_seconds": 0.355557432922069
+}

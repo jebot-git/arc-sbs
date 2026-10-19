@@ -3,7 +3,9 @@
 Measured on 2026-10-19. **An offline 2D-to-SBS converter is feasible on this
 system.** OpenVINO successfully runs depth estimation on the A770, and FFmpeg
 successfully encodes stereo video through that GPU's VA-API media engine.
-The implemented CPU stereo renderer prevents real-time HD conversion.
+The initial CPU stereo renderer prevented real-time HD conversion. A subsequent
+OpenCL implementation now accelerates that stage; see [GPU rendering](GPU_RENDERING.md)
+for current results, validation, and remaining throughput limits.
 
 ## VisionDepth3D starting point
 
@@ -50,18 +52,20 @@ drivers were replaced. Python packages live in the project virtual environment.
 4. Smooth the 2nd/98th-percentile normalization bounds, reset at simple scene
    cuts, and apply a small bilateral depth filter. Larger depth values are nearer.
 5. Produce both eyes with forward horizontal splatting, a nearest-surface
-   z-buffer, and horizontal background filling for disocclusions. This stage is
-   NumPy/OpenCV on CPU, using integer pixel positions.
+   z-buffer, and horizontal background filling for disocclusions. This stage now
+   defaults to OpenCL on A770; NumPy/OpenCV remains as a CPU reference. Both use
+   integer pixel positions.
 6. Pack half or full SBS, encode H.264 on Arc using VA-API, then attach the first
    optional audio stream as AAC and bound it to the converted duration.
 7. Publish output atomically after successful muxing; record timings separately.
 
 The pipeline streams frames and does not retain the movie in RAM. The rendering
 working set scales with frame resolution, while FFmpeg performs normal buffering.
-OpenVINO acceleration applies to depth inference; it does not accelerate the
-NumPy renderer. Video encode acceleration uses VA-API, independently of OpenVINO.
+OpenVINO accelerates depth inference, OpenCL accelerates stereo rendering, and
+VA-API accelerates video encoding. These use separate contexts and host transfers.
+The CPU normalization and decoding stages remain.
 
-## Measurements
+## Initial measurements (CPU stereo renderer)
 
 Depth-only tests use the same seeded 640×360 image, three warmups, and synchronous
 inference. They include preprocessing and output resizing. Compilation is excluded.
@@ -94,7 +98,7 @@ Raw measurements and model checksums are in [measurements/](measurements/).
 
 ## Validation and quality
 
-- Eleven automated tests pass. Coverage includes RGB normalization, letterbox,
+- The initial eleven automated tests passed (now 39 including GPU coverage). Coverage includes RGB normalization, letterbox,
   device selection, neutral depth, scene-cut reset, eye order/disparity sign,
   foreground collision handling, background filling, partial pipe reads, real
   CPU/FFmpeg conversion with AAC, frame limits, existing-file protection, and
@@ -115,11 +119,11 @@ Raw measurements and model checksums are in [measurements/](measurements/).
 
 ## Work required beyond the prototype
 
-The first performance milestone is a GPU stereo renderer: subpixel splatting,
-z-buffer visibility, and directional fill in OpenCL, SYCL, or another appropriate
-GPU compute backend. Benchmark it independently, then overlap depth and video
-stages and reduce host/device copies. CPU rendering is currently the main target;
-a faster depth model alone cannot deliver real-time HD conversion.
+GPU visibility, nearest-pixel splatting, background filling, and SBS packing are
+now implemented and measured in [GPU rendering](GPU_RENDERING.md). Next steps are
+subpixel quality, overlapping depth/video stages, reducing host/device copies,
+and profiling CPU depth normalization and decoding. The original CPU timings
+above are retained as a baseline.
 
 Quality work needs motion-compensated temporal depth, edge-aware upsampling,
 better disocclusion reconstruction, and stereo-window controls, tested on moving

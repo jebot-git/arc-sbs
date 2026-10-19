@@ -21,6 +21,10 @@ implements a generic independent depth-image-based rendering baseline.
   Intel's [Depth Anything V2 notebook](https://docs.openvino.ai/2024/notebooks/depth-anything-v2-with-output.html)
   provides independent evidence of model conversion/inference feasibility. This
   project's exporter uses the Hugging Face implementation directly.
+- **PyOpenCL:** [MIT](https://github.com/inducer/pyopencl/blob/main/LICENSE),
+  used to execute the original OpenCL stereo kernels. The GPU implementation
+  uses standard OpenCL atomics and memory operations; it is independent of
+  VisionDepth3D.
 - **FFmpeg:** invoked as an external executable. Its LGPL/GPL licensing depends
   on the build; no FFmpeg binary is bundled. See [FFmpeg legal](https://ffmpeg.org/legal.html).
 - **NumPy, OpenCV, PyTorch, Transformers, Hugging Face Hub:** installed separately

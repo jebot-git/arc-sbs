@@ -1,0 +1,77 @@
+{
+  "renderer": {
+    "backend": "opencl",
+    "device": "Intel(R) Arc(TM) A770 Graphics",
+    "platform": "Intel(R) OpenCL Graphics (discrete)",
+    "driver": "26.35.39758.11",
+    "init_seconds": 0.0062005539948586375,
+    "scope": "synchronous, includes host/device copies; no zero-copy sharing"
+  },
+  "natural_frame_size": [
+    1920,
+    1080
+  ],
+  "parity": [
+    {
+      "layout": "half",
+      "swap": false,
+      "unequal_components": 0,
+      "max_error": 0
+    },
+    {
+      "layout": "half",
+      "swap": true,
+      "unequal_components": 0,
+      "max_error": 0
+    },
+    {
+      "layout": "full",
+      "swap": false,
+      "unequal_components": 0,
+      "max_error": 0
+    },
+    {
+      "layout": "full",
+      "swap": true,
+      "unequal_components": 0,
+      "max_error": 0
+    }
+  ],
+  "media": [
+    {
+      "file": "gpu-1080p-half-sbs.mp4",
+      "size": [
+        1920,
+        1080
+      ],
+      "duration": 1.0,
+      "audio_present": true,
+      "full_decode_passed": true
+    },
+    {
+      "file": "gpu-natural-full-sbs.mp4",
+      "size": [
+        1920,
+        540
+      ],
+      "duration": 2.0,
+      "audio_present": true,
+      "full_decode_passed": true
+    },
+    {
+      "file": "gpu-1080p-3s-sbs.mp4",
+      "size": [
+        1920,
+        1080
+      ],
+      "duration": 3.048,
+      "audio_present": true,
+      "full_decode_passed": true
+    }
+  ],
+  "decoded_cpu_gpu_frame_parity": {
+    "frames": 72,
+    "identical": true
+  },
+  "passed": true
+}

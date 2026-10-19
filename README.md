@@ -4,9 +4,10 @@ An independent Linux command-line prototype for converting SDR 2D video to
 side-by-side stereoscopic video using the Intel Arc A770 and OpenVINO.
 
 **Status:** working offline prototype, validated on this machine. Depth inference
-runs on Arc; video encoding uses Intel VA-API; stereo rendering currently runs on
-CPU. See [feasibility and measurements](docs/FEASIBILITY.md) before planning a
-large conversion.
+and stereo rendering run on Arc using OpenVINO and OpenCL; video encoding uses
+Intel VA-API. GPU rendering is the default; `--renderer cpu` keeps the reference
+path available. See [GPU rendering and measurements](docs/GPU_RENDERING.md) and
+the [feasibility assessment](docs/FEASIBILITY.md) before planning a large conversion.
 
 VisionDepth3D was the requested starting point, but its current application is
 private and its license prohibits derivatives. This repository contains original
@@ -17,7 +18,7 @@ See [provenance](THIRD_PARTY_NOTICES.md).
 ## Setup
 
 Requires Linux, Python 3.11–3.13, `uv`, FFmpeg/ffprobe with `libx264`, Intel
-OpenCL compute runtime for OpenVINO GPU inference, and Intel media driver for
+OpenCL compute runtime for inference/rendering, and Intel media driver for
 VA-API encoding. Access to `/dev/dri` must be available to your user.
 
 ```bash
@@ -42,8 +43,12 @@ uv run arc-sbs convert input.mp4 output-full-sbs.mkv \
   --report artifacts/my-conversion.json
 ```
 
+- `--renderer opencl` is the default and selects the Intel A770 by name. It
+  requires 64-bit integer OpenCL atomics. Initialization failures are explicit;
+  use `--renderer cpu` for the NumPy/OpenCV reference implementation.
 - `--device ARC` is the default and selects A770 by name, currently `GPU.1`.
-  Selection fails explicitly if A770 is absent. `--device CPU` is available.
+  Selection fails explicitly if A770 is absent. For an entirely CPU pipeline,
+  use `--device CPU --renderer cpu --encoder libx264`.
 - `--encoder h264_vaapi` uses Intel encoding by default. The configured render
   node is `/dev/dri/by-path/pci-0000:03:00.0-render`, the A770 on this machine.
   Override `--vaapi-device` on a different host. `libx264`, `hevc_vaapi`, and
@@ -68,14 +73,19 @@ uv run arc-sbs make-demo artifacts/source.mp4
 uv run arc-sbs convert artifacts/source.mp4 artifacts/demo.mp4
 uv run arc-sbs benchmark --device ARC --iterations 30
 uv run arc-sbs benchmark --device CPU --iterations 15
+uv run arc-sbs benchmark-render --renderer opencl --iterations 30
+uv run arc-sbs benchmark-render --renderer cpu --iterations 30
 uv run --extra dev pytest -q
 ```
 
-Existing local artifacts include `artifacts/demo-half-sbs.mp4`,
-`artifacts/demo-1080p-half-sbs.mp4`, `artifacts/natural-full-sbs.mp4`, and
-`artifacts/contact-sheet.jpg`. Media, models, and caches are excluded from Git.
+Existing local GPU artifacts include `artifacts/gpu-1080p-half-sbs.mp4`,
+`artifacts/gpu-1080p-3s-sbs.mp4`, `artifacts/gpu-natural-full-sbs.mp4`, and
+`artifacts/gpu-stereo-preview.jpg`. Media, models, and caches are excluded from Git.
 The procedural demo tests plumbing; the natural sample tests a static scene.
-Neither is a representative moving-film quality benchmark.
+Neither is a representative moving-film quality benchmark. The 39 tests pass
+on this A770; GPU tests skip on hosts without it. Full-resolution natural-scene
+parity and demo decoding can be checked with
+`uv run python scripts/validate_gpu_renderer.py` after creating the local media.
 
 To check the exported model against its original FP32 PyTorch implementation:
 
@@ -111,7 +121,8 @@ uv run --extra export arc-sbs prepare-model \
 ## Development
 
 `src/arc_sbs/depth.py` handles GPU selection, preprocessing, inference, and depth
-normalization. `stereo.py` implements generic depth-image-based rendering.
+normalization. `gpu_stereo.py` and `stereo.cl` implement the OpenCL renderer;
+`stereo.py` retains the CPU reference and shared validation.
 `video.py` manages FFmpeg and output integrity. `model.py` handles one-time
 export. `cli.py` provides the commands. Dependencies are pinned in `uv.lock`;
 PyTorch resolves from its CPU wheel index for the export tool.

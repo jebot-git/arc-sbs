@@ -10,7 +10,7 @@ import time
 import numpy as np
 
 from .depth import DepthEstimator, DepthNormalizer
-from .stereo import render_sbs
+from .stereo import create_renderer
 
 
 def probe(path):
@@ -42,7 +42,7 @@ def encoder_args(codec, vaapi_device):
 def convert(source, output, *, model, device="ARC", layout="half", strength=0.025,
             convergence=0.5, swap=False, encoder="h264_vaapi",
             vaapi_device="/dev/dri/by-path/pci-0000:03:00.0-render", frames=None,
-            smoothing=0.85, overwrite=False):
+            smoothing=0.85, overwrite=False, renderer="opencl"):
     source, output = Path(source).resolve(), Path(output).resolve()
     if source == output:
         raise ValueError("Input and output paths must differ")
@@ -75,6 +75,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
         raise ValueError("Input frame rate must be >0 and <=240")
     fps_text = str(fps)
     output.parent.mkdir(parents=True, exist_ok=True)
+    stereo_renderer = create_renderer(renderer)
     estimator = DepthEstimator(model, device)
     normalizer = DepthNormalizer(smoothing)
     out_width = width*2 if layout == "full" else width
@@ -108,7 +109,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
                         depth = normalizer.apply(estimator.infer(frame), frame)
                         totals["depth_seconds"] += time.perf_counter()-t
                         t = time.perf_counter()
-                        stereo = render_sbs(frame, depth, strength, convergence, layout, swap)
+                        stereo = stereo_renderer.render(frame, depth, strength, convergence, layout, swap)
                         totals["render_seconds"] += time.perf_counter()-t
                         t = time.perf_counter()
                         writer.stdin.write(stereo.tobytes())
@@ -160,6 +161,7 @@ def convert(source, output, *, model, device="ARC", layout="half", strength=0.02
         "input": str(source), "output": str(output), "frames": count,
         "source_fps": float(fps), "duration_seconds": duration,
         "input_size": [width, height], "output_size": [out_width, height],
+        "renderer": stereo_renderer.info,
         "layout": layout, "eye_order": "right_left" if swap else "left_right",
         "strength": strength, "convergence": convergence, "encoder": encoder,
         "vaapi_device": str(vaapi_device) if encoder.endswith("_vaapi") else None,

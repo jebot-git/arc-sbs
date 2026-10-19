@@ -1,0 +1,21 @@
+{
+  "renderer": {
+    "backend": "opencl",
+    "device": "Intel(R) Arc(TM) A770 Graphics",
+    "platform": "Intel(R) OpenCL Graphics (discrete)",
+    "driver": "26.35.39758.11",
+    "init_seconds": 0.05979244099580683,
+    "scope": "synchronous, includes host/device copies; no zero-copy sharing"
+  },
+  "input_size": [
+    1920,
+    1080
+  ],
+  "layout": "half",
+  "iterations": 30,
+  "mean_ms": 9.325605001261767,
+  "p50_ms": 10.018228000262752,
+  "p95_ms": 11.625450803694548,
+  "fps": 107.23164876323827,
+  "scope": "render only, seeded RGB/planes; validation, allocations and GPU copies included; 3 warmups excluded"
+}

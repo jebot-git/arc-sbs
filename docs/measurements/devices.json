@@ -14,5 +14,17 @@
     }
   ],
   "ffmpeg": "/usr/bin/ffmpeg",
-  "ffprobe": "/usr/bin/ffprobe"
+  "ffprobe": "/usr/bin/ffprobe",
+  "opencl_gpus": [
+    {
+      "name": "Intel(R) Arc(TM) A770 Graphics",
+      "platform": "Intel(R) OpenCL Graphics (discrete)",
+      "driver": "26.35.39758.11"
+    },
+    {
+      "name": "Intel(R) UHD Graphics 770",
+      "platform": "Intel(R) OpenCL Graphics (integrated)",
+      "driver": "26.35.39758.11"
+    }
+  ]
 }

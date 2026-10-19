@@ -1,0 +1,18 @@
+{
+  "renderer": {
+    "backend": "cpu",
+    "device": "NumPy/OpenCV CPU",
+    "init_seconds": 0.0
+  },
+  "input_size": [
+    1920,
+    1080
+  ],
+  "layout": "half",
+  "iterations": 30,
+  "mean_ms": 328.31136649862555,
+  "p50_ms": 329.2187469996861,
+  "p95_ms": 334.1635098448023,
+  "fps": 3.045889061547878,
+  "scope": "render only, seeded RGB/planes; validation, allocations and GPU copies included; 3 warmups excluded"
+}

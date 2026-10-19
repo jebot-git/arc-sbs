@@ -36,15 +36,8 @@ def render_sbs(frame, depth, strength=0.025, convergence=0.5, layout="half", swa
     Positive near disparity places the left-eye feature to the right of the
     right-eye feature (crossed disparity / in front of the screen).
     """
+    validate_inputs(frame, depth, strength, convergence, layout)
     h, w = frame.shape[:2]
-    if depth.shape != (h, w) or not np.isfinite(depth).all():
-        raise ValueError("Depth must be finite and match frame dimensions")
-    if not 0 <= strength <= 0.1 or not 0 <= convergence <= 1:
-        raise ValueError("strength must be 0..0.1 and convergence 0..1")
-    if layout not in ("half", "full"):
-        raise ValueError("layout must be half or full")
-    if w % 2 or h % 2:
-        raise ValueError("Even source dimensions are required for YUV420 SBS")
     disparity = (np.clip(depth, 0, 1)-convergence) * (strength*w)
     left = warp_eye(frame, depth, disparity*0.5)
     right = warp_eye(frame, depth, -disparity*0.5)
@@ -54,3 +47,33 @@ def render_sbs(frame, depth, strength=0.025, convergence=0.5, layout="half", swa
         left = cv2.resize(left, (w//2, h), interpolation=cv2.INTER_AREA)
         right = cv2.resize(right, (w//2, h), interpolation=cv2.INTER_AREA)
     return np.concatenate((left, right), axis=1)
+
+
+def validate_inputs(frame, depth, strength, convergence, layout):
+    if frame.ndim != 3 or frame.shape[2] != 3 or frame.dtype != np.uint8:
+        raise ValueError("Frame must be an HxWx3 uint8 BGR array")
+    h, w = frame.shape[:2]
+    if h <= 0 or w <= 0:
+        raise ValueError("Frame dimensions must be positive")
+    if depth.shape != (h, w) or not np.isfinite(depth).all():
+        raise ValueError("Depth must be finite and match frame dimensions")
+    if not 0 <= strength <= 0.1 or not 0 <= convergence <= 1:
+        raise ValueError("strength must be 0..0.1 and convergence 0..1")
+    if layout not in ("half", "full"):
+        raise ValueError("layout must be half or full")
+    if w % 2 or h % 2:
+        raise ValueError("Even source dimensions are required for YUV420 SBS")
+
+
+class CPURenderer:
+    info = {"backend": "cpu", "device": "NumPy/OpenCV CPU", "init_seconds": 0.0}
+    render = staticmethod(render_sbs)
+
+
+def create_renderer(backend):
+    if backend == "cpu":
+        return CPURenderer()
+    if backend == "opencl":
+        from .gpu_stereo import OpenCLRenderer
+        return OpenCLRenderer()
+    raise ValueError("renderer must be opencl or cpu")

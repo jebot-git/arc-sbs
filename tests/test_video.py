@@ -35,7 +35,7 @@ def media(tmp_path):
 def test_real_cpu_pipeline_preserves_audio_limits_frames_and_refuses_overwrite(media, tmp_path):
     source, model = media
     output = tmp_path / "stereo.mkv"
-    result = convert(source, output, model=model, device="CPU", encoder="libx264", layout="full", frames=4)
+    result = convert(source, output, model=model, device="CPU", renderer="cpu", encoder="libx264", layout="full", frames=4)
     assert result["frames"] == 4
     assert result["duration_seconds"] == 0.5
     info = probe(output)
@@ -46,7 +46,7 @@ def test_real_cpu_pipeline_preserves_audio_limits_frames_and_refuses_overwrite(m
     assert video.get("tags", {}).get("stereo_mode") == "left_right"
     before = output.read_bytes()
     with pytest.raises(FileExistsError):
-        convert(source, output, model=model, device="CPU", encoder="libx264")
+        convert(source, output, model=model, device="CPU", renderer="cpu", encoder="libx264")
     assert output.read_bytes() == before
 
 
@@ -54,7 +54,7 @@ def test_encoder_failure_is_atomic_and_cleans_temporary_files(media, tmp_path):
     source, model = media
     output = tmp_path / "broken.mp4"
     with pytest.raises(RuntimeError, match="Encoder:"):
-        convert(source, output, model=model, device="CPU", encoder="h264_vaapi",
+        convert(source, output, model=model, device="CPU", renderer="cpu", encoder="h264_vaapi",
                 vaapi_device="/no/such/device", frames=1)
     assert not output.exists()
     assert not list(tmp_path.glob(".arc-sbs-*"))
