@@ -11,10 +11,10 @@ from .backend import BACKEND, DEFAULT_DEVICE, GPU_LABEL, MODEL_SUFFIX
 
 try:
     from PySide6.QtCore import QEvent, QProcess, QSettings, QTimer, QUrl, Qt, Signal
-    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
     from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
         QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
-        QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSpinBox, QToolButton, QVBoxLayout, QWidget)
+        QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSpinBox, QToolButton, QVBoxLayout, QWidget)
 except ImportError as exc:
     raise SystemExit('Qt6 GUI requires the gui extra: uv sync --extra gui') from exc
 
@@ -180,6 +180,100 @@ class ConversionWindow(QMainWindow):
         root.addWidget(self.log)
         self.input_path.editingFinished.connect(self._suggest_output)
         self.acceleration.currentIndexChanged.connect(self._set_encoders)
+        self._setup_menus()
+
+    def _setup_menus(self):
+        # Qt exports this model using DBusMenu and associates it with this
+        # Wayland window. DomeD supplies its own desktop/XR Window controls.
+        bar = self.menuBar()
+        bar.setNativeMenuBar(True)
+        self.menu_actions = {}
+
+        def command(menu, name, label, handler, shortcut=None, role=QAction.MenuRole.NoRole):
+            action = QAction(label, self)
+            action.setObjectName(name)
+            action.setMenuRole(role)
+            if shortcut is not None:
+                action.setShortcut(shortcut)
+            action.triggered.connect(lambda checked=False: handler())
+            menu.addAction(action)
+            self.menu_actions[name] = action
+            return action
+
+        file = bar.addMenu('&File')
+        command(file, 'open', '&Open Video…', self._browse_input, QKeySequence.StandardKey.Open)
+        command(file, 'output', 'Choose &Output…', self._browse_output)
+        command(file, 'model', 'Choose Depth &Model…', self._browse_model)
+        file.addSeparator()
+        command(file, 'convert', '&Convert Video', self.start, 'Ctrl+Return')
+        command(file, 'cancel', 'Cancel Conversion', self.cancel)
+        command(file, 'folder', 'Open Output Folder', self._open_folder)
+        file.addSeparator()
+        command(file, 'quit', '&Quit', self.close, QKeySequence.StandardKey.Quit, QAction.MenuRole.QuitRole)
+
+        edit = bar.addMenu('&Edit')
+        for name, label, shortcut in (
+                ('undo', '&Undo', QKeySequence.StandardKey.Undo),
+                ('redo', '&Redo', QKeySequence.StandardKey.Redo),
+                ('cut', 'Cu&t', QKeySequence.StandardKey.Cut),
+                ('copy', '&Copy', QKeySequence.StandardKey.Copy),
+                ('paste', '&Paste', QKeySequence.StandardKey.Paste),
+                ('selectAll', 'Select &All', QKeySequence.StandardKey.SelectAll)):
+            command(edit, name, label, lambda name=name: self._edit_command(name), shortcut)
+
+        view = bar.addMenu('&View')
+        for name, label, button in (('options', 'More Options', self.advanced_toggle),
+                                     ('details', 'Show Details', self.log_toggle)):
+            action = command(view, name, label, button.toggle)
+            action.setCheckable(True)
+            action.setChecked(button.isChecked())
+            button.toggled.connect(action.setChecked)
+
+        window = bar.addMenu('&Window')
+        command(window, 'minimize', '&Minimize', self.showMinimized)
+        help_menu = bar.addMenu('&Help')
+        command(help_menu, 'about', '&About Arc SBS', self._about,
+                role=QAction.MenuRole.AboutRole)
+        QApplication.instance().focusChanged.connect(self._update_menu_state)
+        QApplication.clipboard().dataChanged.connect(self._update_menu_state)
+        for field in (self.input_path, self.output_path, self.model_path, self.vaapi_path, self.log):
+            field.selectionChanged.connect(self._update_menu_state)
+            field.textChanged.connect(self._update_menu_state)
+        self.log.undoAvailable.connect(self._update_menu_state)
+        self.log.redoAvailable.connect(self._update_menu_state)
+        edit.aboutToShow.connect(self._update_menu_state)
+        self._update_menu_state()
+
+    def _edit_command(self, name):
+        field = QApplication.focusWidget()
+        if isinstance(field, (QLineEdit, QPlainTextEdit)) and self.isAncestorOf(field):
+            getattr(field, name)()
+            self._update_menu_state()
+
+    def _update_menu_state(self, *_):
+        for name in ('open', 'output', 'model', 'convert', 'options'):
+            self.menu_actions[name].setEnabled(not self.active)
+        self.menu_actions['cancel'].setEnabled(self.active and self.cancel_button.isEnabled())
+        self.menu_actions['folder'].setEnabled(self.open_folder.isEnabled())
+        field = QApplication.focusWidget()
+        editable = isinstance(field, (QLineEdit, QPlainTextEdit)) and self.isAncestorOf(field) and field.isEnabled()
+        writable = editable and not field.isReadOnly()
+        selected = editable and (field.hasSelectedText() if isinstance(field, QLineEdit)
+                                 else field.textCursor().hasSelection())
+        document = field if isinstance(field, QLineEdit) else field.document() if editable else None
+        clipboard = QApplication.clipboard().mimeData()
+        for name, enabled in (
+                ('undo', writable and document.isUndoAvailable()),
+                ('redo', writable and document.isRedoAvailable()),
+                ('cut', writable and selected), ('copy', selected),
+                ('paste', writable and clipboard is not None and clipboard.hasText()),
+                ('selectAll', editable)):
+            self.menu_actions[name].setEnabled(bool(enabled))
+
+    def _about(self):
+        from . import __version__
+        QMessageBox.about(self, 'About Arc SBS',
+                          f'Arc SBS {__version__}\nConvert 2D video to side-by-side 3D.')
 
     @staticmethod
     def _path_row(placeholder, handler):
@@ -270,6 +364,7 @@ class ConversionWindow(QMainWindow):
         self.advanced_toggle.setEnabled(not active)
         self.start_button.setEnabled(not active)
         self.cancel_button.setEnabled(active)
+        self._update_menu_state()
 
     def start(self):
         if self.active:
@@ -352,6 +447,7 @@ class ConversionWindow(QMainWindow):
         if not self.active or self.process.state() == QProcess.ProcessState.NotRunning or getattr(self, '_cancel_sent', False):
             return
         self.cancel_button.setEnabled(False)
+        self._update_menu_state()
         self.status.setText('Cancelling and cleaning up…')
         self._cancel_sent = True
         # The worker handles SIGTERM cooperatively and cleans up FFmpeg/files.
@@ -467,6 +563,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName('Arc SBS')
     app.setOrganizationName('ArcSBS')
+    app.setDesktopFileName('arc-sbs')
     window = ConversionWindow()
     if len(sys.argv) == 2:
         window.input_path.setText(sys.argv[1])

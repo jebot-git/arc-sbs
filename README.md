@@ -1,5 +1,13 @@
 # Arc SBS
 
+The Qt GUI exports native **File**, **Edit**, **View**, **Window**, and **Help**
+menus to DomeD's universal menu bar using Qt's Wayland AppMenu/DBusMenu support.
+File provides input/output/model selection, conversion, cancellation, and the
+output folder. Actions follow conversion availability; Edit operates on the
+focused text field and View stays synchronized with the options/details buttons.
+DomeD supplies desktop/XR window controls. Other desktops can use the same menus
+locally. No platform-theme override is required.
+
 An independent Linux command-line prototype for converting SDR 2D video to
 side-by-side stereoscopic video using Intel Arc/OpenVINO, with experimental
 AMD ROCm and NVIDIA CUDA builds.

@@ -70,6 +70,53 @@ def configure(w,media,tmp_path):
     w.frame_limit.setValue(5)
 
 
+def test_native_menu_routes_commands_and_tracks_conversion_state(window, app, monkeypatch):
+    calls = []
+    monkeypatch.setattr(window, 'build_job', lambda: calls.append('convert') or (_ for _ in ()).throw(ValueError('test validation')))
+    window.menu_actions['convert'].trigger()
+    assert calls == ['convert'] and window.status.text() == 'test validation'
+    assert not window.menu_actions['cancel'].isEnabled()
+    window._set_active(True)
+    assert window.menu_actions['cancel'].isEnabled()
+    for name in ('open', 'output', 'model', 'convert', 'options'):
+        assert not window.menu_actions[name].isEnabled()
+    window._set_active(False)
+    assert window.menu_actions['convert'].isEnabled()
+    assert not window.menu_actions['cancel'].isEnabled()
+    window.menu_actions['details'].trigger()
+    assert window.log_toggle.isChecked() and window.menu_actions['details'].isChecked()
+    window.log_toggle.setChecked(False)
+    assert not window.menu_actions['details'].isChecked()
+    window.menu_actions['options'].trigger()
+    assert window.advanced_toggle.isChecked()
+    window.advanced_toggle.setChecked(False)
+    assert not window.menu_actions['options'].isChecked()
+
+
+def test_native_edit_menu_uses_focused_field_and_readonly_log(window, app):
+    window.show()
+    window.input_path.setText('video.mp4')
+    window.input_path.setFocus()
+    app.processEvents()
+    window.menu_actions['selectAll'].trigger()
+    assert window.input_path.selectedText() == 'video.mp4'
+    window.menu_actions['copy'].trigger()
+    assert app.clipboard().text() == 'video.mp4'
+    window.output_path.setFocus()
+    app.processEvents()
+    window.menu_actions['selectAll'].trigger()
+    window.menu_actions['paste'].trigger()
+    assert window.output_path.text() == 'video.mp4'
+    window.log_toggle.setChecked(True)
+    window.log.setPlainText('details')
+    window.log.setFocus()
+    window.log.selectAll()
+    app.processEvents()
+    assert window.menu_actions['copy'].isEnabled()
+    assert not window.menu_actions['cut'].isEnabled()
+    assert not window.menu_actions['paste'].isEnabled()
+
+
 def test_input_file_drop_decodes_paths_suggests_output_and_preserves_custom_destination(window, tmp_path, app):
     source = tmp_path / 'a movie #1 ü.mp4'
     source.touch()
