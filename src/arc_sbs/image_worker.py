@@ -11,6 +11,7 @@ import shutil
 import sys
 import time
 
+from .backend import BACKEND, DEFAULT_DEVICE, DEFAULT_ENCODER
 from .paths import model_path
 from .image_layout import detect_layout, file_metadata
 from .xr import WayVROutput, headset_connected
@@ -18,7 +19,7 @@ from .alpha import resize_image
 
 
 class ImageConverter:
-    def __init__(self, model=None, device='ARC', renderer='opencl', max_edge=3840):
+    def __init__(self, model=None, device=DEFAULT_DEVICE, renderer='opencl', max_edge=3840):
         self.model = model or model_path()
         self.device = device
         self.renderer_name = renderer
@@ -160,7 +161,7 @@ def serve(converter, stream, emit, xr=None, connected=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model', type=Path, default=model_path())
-    parser.add_argument('--device', default='ARC')
+    parser.add_argument('--device', default=DEFAULT_DEVICE)
     parser.add_argument('--renderer', choices=['opencl', 'cpu'], default='opencl')
     parser.add_argument('--xr-backend', choices=['wayvr', 'domed'], default='wayvr')
     args = parser.parse_args()

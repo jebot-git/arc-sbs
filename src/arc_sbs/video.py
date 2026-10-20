@@ -11,6 +11,7 @@ import time
 import cv2
 import numpy as np
 
+from .backend import BACKEND, DEFAULT_DEVICE, DEFAULT_ENCODER
 from .depth import DepthEstimator, DepthNormalizer
 from .stereo import create_renderer
 
@@ -45,8 +46,8 @@ def encoder_args(codec, vaapi_device):
     return ["-vf", "format=nv12,hwupload", "-c:v", codec, "-qp", "23"]
 
 
-def convert(source, output, *, model, device="ARC", layout="half", strength=0.025,
-            convergence=0.5, swap=False, encoder="h264_vaapi",
+def convert(source, output, *, model, device=DEFAULT_DEVICE, layout="half", strength=0.025,
+            convergence=0.5, swap=False, encoder=DEFAULT_ENCODER,
             vaapi_device="/dev/dri/by-path/pci-0000:03:00.0-render", frames=None,
             smoothing=0.85, overwrite=False, renderer="opencl",
             depth_processing="full", pipeline="overlap", preview_port=None, pace=False,

@@ -191,3 +191,33 @@ def test_gui_cancellation_cleans_worker_and_preserves_destination(window,gui_med
     assert output.read_bytes()==b'existing output'
     assert not list(tmp_path.glob('.arc-sbs-*'))
     assert window._job_dir is None
+
+
+@pytest.mark.parametrize('backend,alias', [('amd', 'AMD'), ('nvidia', 'NVIDIA')])
+def test_experimental_build_gui_uses_pt_model_and_software_encoding(app, tmp_path, monkeypatch, backend, alias):
+    from arc_sbs import gui
+    monkeypatch.setattr(gui, 'BACKEND', backend)
+    monkeypatch.setattr(gui, 'DEFAULT_DEVICE', alias)
+    monkeypatch.setattr(gui, 'GPU_LABEL', f'{alias} (experimental)')
+    monkeypatch.setattr(gui, 'MODEL_SUFFIX', '.pt')
+    source = tmp_path / 'input.mp4'
+    model = tmp_path / 'depth.pt'
+    source.touch()
+    model.touch()
+    settings = QSettings(str(tmp_path / 'vendor.ini'), QSettings.Format.IniFormat)
+    w = gui.ConversionWindow(settings)
+    try:
+        w.input_path.setText(str(source))
+        w.model_path.setText(str(model))
+        w.output_path.setText(str(tmp_path / 'output.mp4'))
+        job = w.build_job()
+        assert job['device'] == alias and job['renderer'] == 'opencl'
+        assert job['encoder'] == 'libx264'
+        w.acceleration.setCurrentIndex(1)
+        assert w.build_job()['device'] == 'CPU'
+        assert w.build_job()['renderer'] == 'cpu'
+        w.model_path.setText(str(source))
+        with pytest.raises(ValueError, match='.pt'):
+            w.build_job()
+    finally:
+        w.close()

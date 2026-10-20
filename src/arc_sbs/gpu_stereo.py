@@ -1,6 +1,6 @@
-"""Persistent A770 OpenCL renderer with deterministic depth/source visibility.
+"""Persistent build-selected OpenCL renderer with deterministic depth/source visibility.
 
-OpenVINO handles neural inference. OpenCL handles generic splatting, z-buffering,
+The selected inference backend handles neural inference. OpenCL handles generic splatting, z-buffering,
 disocclusion fill and SBS packing, including host/device transfers in render().
 The renderer is synchronous and intended to be owned by a single pipeline.
 """
@@ -10,6 +10,7 @@ import time
 import numpy as np
 import pyopencl as cl
 
+from .backend import BACKEND
 from .stereo import validate_inputs
 from .alpha import visibility_depth
 
@@ -19,13 +20,22 @@ def gpu_devices():
     return [d for p in cl.get_platforms() for d in p.get_devices(device_type=cl.device_type.GPU)]
 
 
+def matches_backend(device):
+    vendor = device.vendor.lower()
+    if BACKEND == "intel":
+        return "A770" in device.name and "intel" in vendor
+    if BACKEND == "amd":
+        return "advanced micro devices" in vendor or "amd" in vendor
+    return "nvidia" in vendor
+
+
 class OpenCLRenderer:
     def __init__(self):
         start = time.perf_counter()
         try:
-            matches = [d for d in gpu_devices() if "A770" in d.name and "Intel" in d.vendor]
+            matches = [d for d in gpu_devices() if matches_backend(d)]
             if not matches:
-                raise RuntimeError("Intel Arc A770 OpenCL device unavailable")
+                raise RuntimeError(f"{BACKEND} OpenCL GPU unavailable")
             self.device = matches[0]
             required = {"cl_khr_int64_base_atomics", "cl_khr_int64_extended_atomics"}
             if not required.issubset(self.device.extensions.split()):

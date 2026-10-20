@@ -1,7 +1,10 @@
 # Local Linux installation
 
-Requires `uv` on PATH, FFmpeg/ffprobe, Intel OpenCL and VA-API drivers, and
-user access to `/dev/dri`. The installer downloads locked Python dependencies
+Requires `uv` on PATH, FFmpeg/ffprobe, and drivers for the selected build.
+Intel uses OpenVINO, Intel OpenCL and VA-API. Experimental AMD uses PyTorch
+ROCm 6.4; experimental NVIDIA uses PyTorch CUDA 12.8. Both GPU builds target
+Linux x86_64, use vendor OpenCL for stereo rendering, and default to software
+H.264 encoding. AMD requires access to `/dev/kfd` and `/dev/dri`. The installer downloads locked Python dependencies
 (including Qt6); it does not install system packages. No root access is needed.
 The bundle targets Linux with Python 3.12 (uv can provision Python).
 
@@ -13,7 +16,10 @@ python3 install.py --model /path/to/depth-small.xml
 ~/.local/bin/arc-sbs devices
 ```
 
-Keep the model XML, BIN and provenance JSON together. Model weights are not
+Choose the bundle matching your GPU (`intel`, `amd` or `nvidia`); its backend
+is fixed during build. Intel models use XML, BIN and provenance JSON.
+AMD/NVIDIA models use a `.pt` TorchScript file and provenance JSON; pass
+`--model /path/to/depth-small.pt` instead. Keep those files together. Model weights are not
 included. Existing prepared models may also be selected in the GUI. For model
 preparation from source, see the repository README and its `export` extra.
 
@@ -38,3 +44,8 @@ To uninstall, remove `~/.local/opt/arc-sbs`, `~/.local/bin/arc-sbs`,
 `~/.local/bin/arc-sbs-gui`, and the `arc-sbs.desktop` and `arc-sbs.svg` files
 under your user applications/icons directories. Models, caches and Qt settings
 are retained unless removed separately. System drivers are unaffected.
+
+Build commands: `python3 packaging/build.py --backend intel|amd|nvidia`
+(select one value). Artifacts are written under `dist/<backend>/`. For preparing
+AMD/NVIDIA models in the installed environment, see the README build-time
+backend section. GPU hardware execution on those vendors remains experimental.

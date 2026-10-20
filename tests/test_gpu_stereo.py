@@ -1,4 +1,4 @@
-"""Real GPU parity tests; skip discovery only on machines without an A770."""
+"""Real GPU parity tests; skip discovery only on machines without the built GPU vendor."""
 import numpy as np
 import pytest
 
@@ -8,14 +8,14 @@ from arc_sbs.stereo import render_sbs
 @pytest.fixture(scope="module")
 def gpu_renderer():
     cl = pytest.importorskip("pyopencl")
-    from arc_sbs.gpu_stereo import OpenCLRenderer, gpu_devices
+    from arc_sbs.gpu_stereo import OpenCLRenderer, gpu_devices, matches_backend
     try:
         available = gpu_devices()
     except cl.Error:
         pytest.skip("OpenCL runtime unavailable")
-    if not any("A770" in d.name and "Intel" in d.vendor for d in available):
-        pytest.skip("A770 unavailable")
-    # Build or execution failures on an available A770 must fail the tests.
+    if not any(matches_backend(d) for d in available):
+        pytest.skip("Built-backend OpenCL GPU unavailable")
+    # Build or execution failures on an available matching GPU must fail the tests.
     return OpenCLRenderer()
 
 

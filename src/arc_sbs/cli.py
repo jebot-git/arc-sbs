@@ -9,6 +9,7 @@ import time
 import cv2
 import numpy as np
 
+from .backend import BACKEND, DEFAULT_DEVICE, DEFAULT_ENCODER
 from . import __version__
 from .paths import model_path
 from .depth import DepthEstimator, devices
@@ -17,17 +18,17 @@ from .video import convert
 
 
 def parser():
-    p = argparse.ArgumentParser(description="Intel Arc/OpenVINO 2D-to-SBS prototype")
+    p = argparse.ArgumentParser(description="Build-selected GPU 2D-to-SBS prototype")
     p.add_argument("--version", action="version", version=f"Arc SBS {__version__}")
     commands = p.add_subparsers(dest="command", required=True)
-    commands.add_parser("devices", help="List OpenVINO devices and FFmpeg availability")
-    prep = commands.add_parser("prepare-model", help="Download official Small weights and export FP16 IR")
+    commands.add_parser("devices", help="List built-backend devices and FFmpeg availability")
+    prep = commands.add_parser("prepare-model", help="Download official Small weights and export for the built backend")
     prep.add_argument("--output", type=Path, default=model_path())
     prep.add_argument("--height", type=int, default=294)
     prep.add_argument("--width", type=int, default=518)
     bench = commands.add_parser("benchmark", help="Warm depth-only inference test on a fixed image")
     bench.add_argument("--model", type=Path, default=model_path())
-    bench.add_argument("--device", default="ARC")
+    bench.add_argument("--device", default=DEFAULT_DEVICE)
     bench.add_argument("--image", type=Path)
     bench.add_argument("--iterations", type=int, default=30)
     bench.add_argument("--report", type=Path)
@@ -42,13 +43,13 @@ def parser():
     conv.add_argument("input", type=Path)
     conv.add_argument("output", type=Path)
     conv.add_argument("--model", type=Path, default=model_path())
-    conv.add_argument("--renderer", choices=["cpu", "opencl"], default="opencl", help="Stereo rendering backend (default: A770 OpenCL)")
-    conv.add_argument("--device", default="ARC", help="ARC selects A770 by name; or CPU/GPU.N")
+    conv.add_argument("--renderer", choices=["cpu", "opencl"], default="opencl", help="Stereo rendering backend (default: built-backend OpenCL)")
+    conv.add_argument("--device", default=DEFAULT_DEVICE, help="Built GPU alias, CPU or GPU.N; ARC selects A770 by name")
     conv.add_argument("--layout", choices=["half", "full"], default="half")
     conv.add_argument("--strength", type=float, default=0.025, help="Disparity / source width, 0..0.1")
     conv.add_argument("--convergence", type=float, default=0.5, help="Screen plane depth, 0=far, 1=near")
     conv.add_argument("--swap-eyes", dest="swap", action="store_true")
-    conv.add_argument("--encoder", choices=["libx264", "h264_vaapi", "hevc_vaapi", "av1_vaapi"], default="h264_vaapi")
+    conv.add_argument("--encoder", choices=["libx264", "h264_vaapi", "hevc_vaapi", "av1_vaapi"], default=DEFAULT_ENCODER)
     conv.add_argument("--vaapi-device", default="/dev/dri/by-path/pci-0000:03:00.0-render")
     conv.add_argument("--frames", type=int, help="Convert only the first N frames")
     conv.add_argument("--smoothing", type=float, default=0.85, help="Normalization bound EMA, [0,1)")
@@ -78,7 +79,7 @@ def main():
         if command == "convert" and report and report.resolve() == args["output"].resolve():
             raise ValueError("Report and video output paths must differ")
         if command == "devices":
-            result = {"devices": devices(), "ffmpeg": shutil.which("ffmpeg"), "ffprobe": shutil.which("ffprobe")}
+            result = {"backend": BACKEND, "devices": devices(), "ffmpeg": shutil.which("ffmpeg"), "ffprobe": shutil.which("ffprobe")}
             try:
                 from .gpu_stereo import gpu_devices
                 result["opencl_gpus"] = [{"name": d.name.strip(), "platform": d.platform.name,

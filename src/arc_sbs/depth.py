@@ -1,12 +1,12 @@
-"""OpenVINO depth inference, fixed-shape RGB preprocessing, and stabilization."""
+"""Build-selected depth inference, shared RGB preprocessing and stabilization."""
 from pathlib import Path
 import time
 
 import cv2
 import numpy as np
-import openvino as ov
 
 from .paths import cache_path
+from .backend import BACKEND, DEFAULT_DEVICE
 
 MODEL_ID = "depth-anything/Depth-Anything-V2-Small-hf"
 MODEL_REVISION = "5426e4f0f36572d16453bbda7a8389317b1bef99"
@@ -15,6 +15,10 @@ STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 
 def devices(core=None):
+    if core is None and BACKEND != "intel":
+        from .torch_depth import torch_devices
+        return torch_devices()
+    import openvino as ov
     core = core or ov.Core()
     return [{"id": d, "name": core.get_property(d, "FULL_DEVICE_NAME")}
             for d in core.available_devices]
@@ -47,7 +51,14 @@ def preprocess(frame, height, width):
 
 
 class DepthEstimator:
-    def __init__(self, model, device="ARC", cache_dir=None):
+    def __new__(cls, model, device=DEFAULT_DEVICE, cache_dir=None):
+        if BACKEND != "intel":
+            from .torch_depth import TorchDepthEstimator
+            return TorchDepthEstimator(model, device, cache_dir)
+        return super().__new__(cls)
+
+    def __init__(self, model, device=DEFAULT_DEVICE, cache_dir=None):
+        import openvino as ov
         cache_dir = cache_path() if cache_dir is None else cache_dir
         core = ov.Core()
         self.device = select_device(core, device)

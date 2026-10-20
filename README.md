@@ -1,7 +1,8 @@
 # Arc SBS
 
 An independent Linux command-line prototype for converting SDR 2D video to
-side-by-side stereoscopic video using the Intel Arc A770 and OpenVINO.
+side-by-side stereoscopic video using Intel Arc/OpenVINO, with experimental
+AMD ROCm and NVIDIA CUDA builds.
 
 **Status:** working conversion/streaming prototype, validated on this machine. Depth inference
 and stereo rendering run on Arc using OpenVINO and OpenCL; video encoding uses
@@ -33,10 +34,63 @@ The application menu also contains **Arc SBS**. The installer uses an isolated,
 versioned environment under `~/.local/opt/arc-sbs`, copies the prepared model to
 user data storage, and creates launchers in `~/.local/bin`. Add that directory
 to PATH if needed. The installed app runs independently of this checkout.
-The bundle in `dist/arc-sbs-0.4.1-linux-user.tar.gz` includes locked, hashed
+The Intel bundle in `dist/intel/arc-sbs-0.4.1-intel-linux-user.tar.gz` includes locked, hashed
 dependency requirements; installation needs network access for Python packages.
 Model weights and system GPU drivers are not bundled. See
 [installation, upgrades and removal](packaging/INSTALL.md).
+
+## Build-time GPU backend selection
+
+Choose exactly one backend when building; the installed package fixes the
+inference runtime, GPU alias, model format and default encoder. A source checkout
+and ordinary `uv build` default to Intel. Building another backend uses an isolated
+source tree and leaves the checkout and its lockfile unchanged.
+
+```bash
+python3 packaging/build.py --backend intel   # default: OpenVINO, Arc A770
+python3 packaging/build.py --backend amd     # experimental: PyTorch ROCm 6.4
+python3 packaging/build.py --backend nvidia  # experimental: PyTorch CUDA 12.8
+```
+
+Artifacts and hashed runtime requirements are separate under `dist/intel`,
+`dist/amd` and `dist/nvidia`. Extract the matching `*-linux-user.tar.gz` bundle
+and run its `install.py`. GPU builds pin PyTorch 2.8.0 from the official
+[ROCm/CUDA wheel indexes](https://pytorch.org/get-started/previous-versions/).
+AMD/NVIDIA bundles target Linux x86_64 and require a card and driver supported by
+that runtime. AMD also needs access to `/dev/kfd` and `/dev/dri`. Install the
+vendor's OpenCL ICD for GPU stereo rendering, with 64-bit atomic support.
+
+All backends use **the same pinned official Depth Anything V2 Small weights**.
+Intel exports FP16-weight OpenVINO IR (`.xml` + `.bin`); AMD/NVIDIA export a
+fixed-shape FP32 TorchScript model (`.pt`). The preprocessing, depth convention,
+and geometry are shared. Models and provenance JSON are prepared separately;
+weights are never included in the build. To prepare a model after installing an
+AMD/NVIDIA bundle:
+
+```bash
+uv pip install --python ~/.local/opt/arc-sbs/current/venv/bin/python 'transformers>=4.48,<6' 'huggingface-hub>=0.28,<3'
+arc-sbs prepare-model --output ~/.local/share/arc-sbs/models/depth-small.pt
+arc-sbs devices
+arc-sbs convert input.mp4 output.mp4
+```
+
+Use `--device AMD` or `--device NVIDIA` (the respective build default), `GPU.N`
+to choose an inference card, or `CPU` for an explicit CPU path. A mismatched
+PyTorch runtime or unavailable GPU fails explicitly. OpenCL selects the first
+GPU matching the built vendor; Intel retains A770 selection by name. Inference
+and OpenCL use separate device lists and host copies. `--renderer cpu` is
+available when the vendor OpenCL driver lacks the required atomics.
+
+AMD/NVIDIA default to software H.264 encoding (`libx264`), avoiding Intel-specific
+VA-API paths; hardware video encoding remains an explicit option. The GUI and
+still-image worker follow the built backend too. The backend cannot be changed
+by a runtime environment variable; install a different build to switch it.
+
+**Experimental validation:** package resolution/builds and CPU execution of the
+portable export are tested. AMD/NVIDIA hardware inference, renderer parity and
+performance remain unvalidated; no acceleration claims are made for these cards.
+Intel performance results elsewhere in this README apply only to the measured
+Intel configuration.
 
 ## Images in qimgvr and XR
 

@@ -7,6 +7,8 @@ import signal
 import sys
 import tempfile
 
+from .backend import BACKEND, DEFAULT_DEVICE, GPU_LABEL, MODEL_SUFFIX
+
 try:
     from PySide6.QtCore import QEvent, QProcess, QSettings, QTimer, QUrl, Qt, Signal
     from PySide6.QtGui import QDesktopServices
@@ -76,7 +78,7 @@ class ConversionWindow(QMainWindow):
         form.addRow('Output video', row)
         self.overwrite = QCheckBox('Replace existing output')
         form.addRow('', self.overwrite)
-        self.model_path, row = self._path_row('OpenVINO depth model (.xml)', self._browse_model)
+        self.model_path, row = self._path_row(f'Depth model ({MODEL_SUFFIX})', self._browse_model)
         self.model_path.setAcceptDrops(False)
         self.model_path.setText(self.settings.value('model', default_model(), type=str))
         form.addRow('Depth model', row)
@@ -91,7 +93,7 @@ class ConversionWindow(QMainWindow):
         self.quality.setToolTip('Fast approximates global depth bounds. Experimental changes edges more.')
         form.addRow('Depth processing', self.quality)
         self.acceleration = QComboBox()
-        self.acceleration.addItem('Intel Arc A770', 'ARC')
+        self.acceleration.addItem(GPU_LABEL, DEFAULT_DEVICE)
         self.acceleration.addItem('CPU', 'CPU')
         form.addRow('Acceleration', self.acceleration)
         settings_layout.addWidget(self.form)
@@ -206,7 +208,7 @@ class ConversionWindow(QMainWindow):
             self.output_path.setText(path if Path(path).suffix else path+('.mkv' if 'Matroska' in selected else '.mp4'))
 
     def _browse_model(self):
-        path, _ = QFileDialog.getOpenFileName(self, 'OpenVINO model', self.model_path.text(), 'OpenVINO model (*.xml)')
+        path, _ = QFileDialog.getOpenFileName(self, 'Depth model', self.model_path.text(), f'Depth model (*{MODEL_SUFFIX})')
         if path:
             self.model_path.setText(path)
 
@@ -240,8 +242,8 @@ class ConversionWindow(QMainWindow):
             return path
         source = existing_file(self.input_path, 'an input video')
         model = existing_file(self.model_path, 'a depth model')
-        if model.suffix.lower() != '.xml' or not model.with_suffix('.bin').is_file():
-            raise ValueError('Choose an OpenVINO .xml model with its matching .bin weights.')
+        if model.suffix.lower() != MODEL_SUFFIX or (BACKEND == 'intel' and not model.with_suffix('.bin').is_file()):
+            raise ValueError(f'Choose a {MODEL_SUFFIX} depth model for this {BACKEND} build (XML requires matching BIN weights).')
         text = self.output_path.text().strip()
         if not text:
             raise ValueError('Choose an output video.')
@@ -252,9 +254,9 @@ class ConversionWindow(QMainWindow):
             raise ValueError('Output must be different from the input and model files.')
         if output.exists() and (not output.is_file() or not self.overwrite.isChecked()):
             raise ValueError('Output already exists. Choose another name or enable Replace existing output.')
-        arc = self.acceleration.currentData() == 'ARC'
+        gpu = self.acceleration.currentData() != 'CPU'
         return {'input': str(source), 'output': str(output), 'model': str(model),
-            'device': 'ARC' if arc else 'CPU', 'renderer': 'opencl' if arc else 'cpu',
+            'device': DEFAULT_DEVICE if gpu else 'CPU', 'renderer': 'opencl' if gpu else 'cpu',
             'encoder': self.encoder.currentData(), 'layout': self.layout_choice.currentData(),
             'depth_processing': self.quality.currentData(), 'pipeline': 'overlap',
             'strength': self.strength.value()/100, 'convergence': self.convergence.value(),

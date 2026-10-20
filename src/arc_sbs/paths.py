@@ -2,6 +2,8 @@
 import os
 from pathlib import Path
 
+from .backend import MODEL_SUFFIX
+
 
 def data_path():
     return Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'arc-sbs'
@@ -10,8 +12,8 @@ def data_path():
 def model_path():
     if os.environ.get('ARC_SBS_MODEL'):
         return Path(os.environ['ARC_SBS_MODEL']).expanduser()
-    installed = data_path() / 'models/depth-small.xml'
-    candidates = [installed, Path.cwd() / 'models/depth-small.xml']
+    installed = data_path() / f'models/depth-small{MODEL_SUFFIX}'
+    candidates = [installed, Path.cwd() / f'models/depth-small{MODEL_SUFFIX}']
     return next((path for path in candidates if path.is_file()), installed)
 
 
