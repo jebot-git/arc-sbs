@@ -262,3 +262,34 @@ an extra alpha channel. The presenter uses transparent margins and alpha-capable
 Wayland buffers. Input 16-bit PNG samples are quantized to 8-bit SDR. Alpha means
 coverage; the model does not simulate refraction or layered glass. The BGR video
 pipeline remains unchanged.
+
+## Shared installations
+
+The bundle installer above targets the current user. A shared deployment can
+instead keep its isolated environment under `/usr/local/libexec/arc-sbs/venv`
+and root-owned launchers in `/usr/local/bin`. Models must be separately prepared,
+readable by intended users, and configured in the application; keep per-user
+preferences and caches writable in each user's profile. Do not run the per-user
+installer with sudo to simulate a system installation. qimgvr can select the
+shared interpreter through `QIMGV_SBS_PYTHON`.
+
+## Command manuals and related projects
+
+Basic manuals: [arc-sbs.1](docs/man/arc-sbs.1), [arc-sbs-gui.1](docs/man/arc-sbs-gui.1). After installation, use `man arc-sbs`.
+The wheel installs these pages under its environment prefix; to expose them system-wide:
+
+```sh
+sudo install -d /usr/local/share/man/man1
+sudo install -m 0644 docs/man/*.1 /usr/local/share/man/man1/
+```
+
+Part of the [de-xr desktop](https://github.com/topics/de-xr):
+[DomeD](https://github.com/jebot-git/DomeD) provides the desktop/session,
+[Ghostty XR](https://github.com/jebot-git/ghostty-xr) the terminal,
+[mpvr](https://github.com/jebot-git/mpvr) video playback,
+[fsvr](https://github.com/jebot-git/fsv-xr) file browsing,
+[qimgvr](https://github.com/jebot-git/qimgvr) image viewing,
+[Arc SBS](https://github.com/jebot-git/arc-sbs) depth conversion, and
+[LightXR](https://github.com/jebot-git/LightXR) the optional login manager.
+Each application has its own dependencies and can be used independently where
+its selected backend permits.

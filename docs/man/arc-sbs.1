@@ -1,0 +1,27 @@
+.TH ARC-SBS 1 "2026-10-20" "de-xr" "User Commands"
+.SH NAME
+arc\-sbs \- convert 2D media into side\-by\-side stereo
+.SH SYNOPSIS
+.nf
+arc\-sbs [\-\-version] COMMAND [OPTIONS]
+arc\-sbs convert INPUT OUTPUT [OPTIONS]
+.fi
+.SH DESCRIPTION
+Independent depth\-based stereo converter using the pinned official Depth Anything V2 Small model. Intel builds use OpenVINO and OpenCL, with experimental AMD and NVIDIA builds selected at packaging time. Model weights and GPU drivers must be prepared separately. Run COMMAND \-\-help for the options supported by the installed backend.
+.SH OPTIONS
+.TP
+.B "\-\-version"
+Print version.
+.TP
+.B "\-\-help"
+Print command help.
+.SH COMMANDS
+devices lists inference devices. prepare\-model prepares the depth model. benchmark measures inference; benchmark\-render measures stereo rendering. convert converts a video. make\-demo generates synthetic input for evaluation.
+.SH CONVERT OPTIONS
+\-\-model PATH selects the model. \-\-renderer cpu|opencl selects the renderer in Intel builds. \-\-device DEVICE selects the inference device. \-\-layout half|full selects SBS packing. \-\-strength N and \-\-convergence N control stereo geometry. \-\-swap\-eyes reverses the eye order. \-\-encoder NAME selects the encoder; \-\-vaapi\-device PATH selects its VA\-API device. \-\-frames N limits processing. \-\-overwrite permits replacing an existing output. \-\-report FILE writes measurements. Backend\-specific choices are listed by convert \-\-help.
+.SH EXAMPLES
+arc\-sbs devices
+.br
+arc\-sbs convert input.mp4 output_SBS.mp4 \-\-layout half
+.SH SEE ALSO
+arc\-sbs\-gui(1), qimgvr(1), mpvr(1)
