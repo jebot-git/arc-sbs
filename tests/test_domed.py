@@ -45,3 +45,27 @@ def test_presenter_uses_only_the_selected_xr_socket_and_owns_its_child(monkeypat
     assert 'WAYLAND_SOCKET' not in options['env']
     output.hide()
     assert child.stopped
+
+
+def test_dome_owns_image_output_even_with_saved_wayvr_preference(monkeypatch):
+    monkeypatch.setattr(domed, 'in_session', lambda: True)
+    assert domed.output_backend('auto') == 'domed'
+    assert domed.output_backend('wayvr') == 'domed'
+    monkeypatch.setattr(domed, 'in_session', lambda: False)
+    assert domed.output_backend('auto') == 'wayvr'
+    assert domed.output_backend('wayvr') == 'wayvr'
+    assert domed.output_backend('domed') == 'domed'
+
+
+def test_socket_identity_survives_compositor_binary_replacement(monkeypatch):
+    import os
+    import struct
+    class Connection:
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def settimeout(self,value):pass
+        def connect(self,path):pass
+        def getsockopt(self,*args):return struct.pack('3i',42,os.getuid(),0)
+    monkeypatch.setattr(domed.socket,'socket',lambda *args:Connection())
+    monkeypatch.setattr(domed.os,'readlink',lambda path:'/usr/local/bin/dome-compositor (deleted)')
+    assert domed.socket_identity('/test') == 42

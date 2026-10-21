@@ -163,14 +163,15 @@ def main():
     parser.add_argument('--model', type=Path, default=model_path())
     parser.add_argument('--device', default=DEFAULT_DEVICE)
     parser.add_argument('--renderer', choices=['opencl', 'cpu'], default='opencl')
-    parser.add_argument('--xr-backend', choices=['wayvr', 'domed'], default='wayvr')
+    parser.add_argument('--xr-backend', choices=['auto', 'wayvr', 'domed'], default='auto')
     args = parser.parse_args()
     protocol = sys.stdout
     def emit(value):
         protocol.write(json.dumps(value) + '\n')
         protocol.flush()
     options = vars(args)
-    backend = options.pop('xr_backend')
+    from .domed import output_backend
+    backend = output_backend(options.pop('xr_backend'))
     xr = None
     if backend == 'domed':
         from .domed import DomeDOutput

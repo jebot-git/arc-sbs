@@ -52,7 +52,7 @@ export = [
     { name = "torch", version = "2.14.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "transformers" },
 ]
-gui = [
+qt6 = [
     { name = "pyside6-essentials" },
 ]
 
@@ -63,12 +63,12 @@ requires-dist = [
     { name = "opencv-python-headless", specifier = ">=4.10,<6" },
     { name = "openvino", specifier = ">=2025.4,<2027" },
     { name = "pyopencl", specifier = ">=2025.2,<2027" },
-    { name = "pyside6-essentials", marker = "extra == 'gui'", specifier = ">=6.8,<7" },
+    { name = "pyside6-essentials", marker = "extra == 'qt6'", specifier = ">=6.8,<7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8,<10" },
     { name = "torch", marker = "extra == 'export'", specifier = ">=2.5,<3", index = "https://download.pytorch.org/whl/cpu" },
     { name = "transformers", marker = "extra == 'export'", specifier = ">=4.48,<6" },
 ]
-provides-extras = ["export", "dev", "gui"]
+provides-extras = ["export", "dev", "gui", "qt6"]
 
 [[package]]
 name = "click"

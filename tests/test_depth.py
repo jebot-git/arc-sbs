@@ -54,3 +54,14 @@ def test_sampled_bounds_are_finite_and_reset_on_scene_cut():
     assert np.isfinite(out).all() and out.min() >= 0 and out.max() <= 1
     normalizer.apply(depth+100,frame+255)
     assert normalizer.cuts == 1 and normalizer.bounds[0] > 100
+
+
+def test_explicit_cpu_does_not_initialize_unrelated_gpu_plugins():
+    class Core:
+        @property
+        def available_devices(self):
+            raise AssertionError("Explicit CPU work enumerated GPU plugins")
+        def get_property(self, device, property):
+            assert (device, property) == ("CPU", "FULL_DEVICE_NAME")
+            return "CPU fixture"
+    assert select_device(Core(), "cpu") == "CPU"

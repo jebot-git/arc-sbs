@@ -9,3 +9,7 @@ artifacts/*
 !artifacts/.gitkeep
 
 dist/
+
+# Isolated FLTK experiment build outputs
+/build-fltk/
+/fltk-*.log

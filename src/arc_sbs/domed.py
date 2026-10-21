@@ -14,7 +14,8 @@ def socket_identity(path):
         connection.settimeout(1)
         connection.connect(str(path))
         pid, uid, _ = struct.unpack('3i', connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
-    if uid != os.getuid() or Path(f'/proc/{pid}/exe').resolve().name != 'dome-compositor':
+    executable = os.readlink(f'/proc/{pid}/exe').removesuffix(' (deleted)')
+    if uid != os.getuid() or Path(executable).name != 'dome-compositor':
         raise ValueError('Wayland socket is not owned by this user’s DomeD compositor')
     return pid
 
@@ -44,6 +45,28 @@ def discover():
         return {'pid': pid, 'base': f'http://127.0.0.1:{port}', 'socket': xr}
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
         return None
+
+
+def in_session():
+    """Keep a Dome caller in its own compositor, including while XR is idle."""
+    if 'dome' in os.environ.get('XDG_CURRENT_DESKTOP', '').lower():
+        return True
+    runtime = Path(os.environ.get('XDG_RUNTIME_DIR', '/nonexistent'))
+    display = os.environ.get('WAYLAND_DISPLAY', '')
+    if display:
+        try:
+            socket_identity(Path(display) if Path(display).is_absolute() else runtime / display)
+            return True
+        except (OSError, ValueError):
+            pass
+    return False
+
+
+def output_backend(requested='auto'):
+    # A saved WayVR preference must not move media out of the active Dome session.
+    if requested == 'domed' or in_session():
+        return 'domed'
+    return 'wayvr'
 
 
 class DomeDOutput:
