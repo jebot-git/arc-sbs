@@ -302,3 +302,12 @@ Part of the [de-xr desktop](https://github.com/topics/de-xr):
 [LightXR](https://github.com/jebot-git/LightXR) the optional login manager.
 Each application has its own dependencies and can be used independently where
 its selected backend permits.
+
+### DomeD appearance
+
+Inside a DomeD session, the GUI watches `dome/appearance.json` in the user's
+configuration directory. Controls and titles follow its palette, opacity and
+bitmap font family, style and native pixel size, including live changes and
+atomic configuration replacement. Outline faces and unavailable bitmap strikes
+fall back to the Qt application font. Other compositors keep normal Qt appearance
+and do not read DomeD's settings.

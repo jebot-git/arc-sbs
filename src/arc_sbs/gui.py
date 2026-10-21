@@ -29,6 +29,9 @@ class ConversionWindow(QMainWindow):
 
     def __init__(self, settings=None):
         super().__init__()
+        from .appearance import DomeAppearance
+        self.dome_appearance = DomeAppearance(QApplication.instance(), self)
+        self.dome_appearance.changed.connect(self._apply_dome_appearance)
         self.settings = settings if settings is not None else QSettings('ArcSBS', 'Converter')
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self._read_stdout)
@@ -47,6 +50,7 @@ class ConversionWindow(QMainWindow):
         self._stdout_buffer = ''
         self._auto_output = ''
         self.setWindowTitle('Arc SBS — Video converter')
+        self._apply_dome_appearance()
         self.resize(840, 680)
         central = QWidget()
         self.setCentralWidget(central)
@@ -54,7 +58,8 @@ class ConversionWindow(QMainWindow):
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(14)
         title = QLabel('Arc SBS')
-        title.setStyleSheet('font-size: 26px; font-weight: 600;')
+        if not self.dome_appearance.enabled:
+            title.setStyleSheet('font-size: 26px; font-weight: 600;')
         root.addWidget(title)
         subtitle = QLabel('Convert a 2D video to side-by-side 3D')
         root.addWidget(subtitle)
@@ -537,6 +542,10 @@ class ConversionWindow(QMainWindow):
             self.input_path.setText(str(source))
             self.settings.setValue('input_dir', str(source.parent))
             self._suggest_output()
+
+    def _apply_dome_appearance(self):
+        if self.dome_appearance.enabled:
+            self.setWindowOpacity(self.dome_appearance.opacity)
 
     def eventFilter(self, target, event):
         if target is self.input_path and event.type() in (
