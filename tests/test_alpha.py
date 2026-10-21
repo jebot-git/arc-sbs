@@ -63,6 +63,15 @@ def test_existing_stereo_preserves_alpha_without_model(tmp_path, layout, swap):
 
 @pytest.mark.parametrize('renderer', ['cpu', 'opencl'])
 def test_depth_conversion_keeps_alpha_and_sends_only_composited_rgb_to_model(tmp_path, renderer):
+    if renderer == 'opencl':
+        cl = pytest.importorskip('pyopencl')
+        from arc_sbs.gpu_stereo import gpu_devices, matches_backend
+        try:
+            available = gpu_devices()
+        except cl.Error:
+            pytest.skip('OpenCL runtime unavailable')
+        if not any(matches_backend(device) for device in available):
+            pytest.skip('Built-backend OpenCL GPU unavailable')
     class Estimator:
         device_name = 'test RGB estimator'
         height, width = 16, 80

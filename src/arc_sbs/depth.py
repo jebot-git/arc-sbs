@@ -25,6 +25,14 @@ def devices(core=None):
 
 
 def select_device(core, requested):
+    # Explicit CPU work must not initialize every installed GPU plugin. A broken
+    # optional GPU driver should not prevent CPU conversion or image previews.
+    if requested.upper() == "CPU":
+        try:
+            core.get_property("CPU", "FULL_DEVICE_NAME")
+        except RuntimeError as error:
+            raise ValueError("Device 'CPU' unavailable; run arc-sbs devices") from error
+        return "CPU"
     available = devices(core)
     if requested.upper() == "ARC":
         matches = [d for d in available if "A770" in d["name"]]
