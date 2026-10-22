@@ -10,6 +10,22 @@ def in_dome_session():
     return bool({'Dome', 'DomeD', 'dome'} & set(os.environ.get('XDG_CURRENT_DESKTOP', '').split(':')))
 
 
+def bootstrap_fonts():
+    """Restrict this application's Fontconfig before Qt caches system fonts."""
+    import shutil
+    import subprocess
+    tool = os.environ.get('DOME_BDF_FONT_TOOL') or shutil.which('dome-bdf-font')
+    if not tool:
+        tool = next((str(parent / 'dome-compositor/target/debug/dome-bdf-font')
+                     for parent in Path(__file__).resolve().parents
+                     if (parent / 'dome-compositor/target/debug/dome-bdf-font').is_file()), None)
+    if not tool:
+        raise RuntimeError('de-xr requires dome-bdf-font')
+    choice = json.loads(subprocess.check_output([tool, 'Unifont / Sans-Serif', '16', '1'], text=True, timeout=30))
+    os.environ['FONTCONFIG_FILE'] = choice['fontconfig']
+    os.environ['DE_XR_FONTCONFIG_BASE'] = choice.get('fontconfig_base', '/etc/fonts/fonts.conf')
+
+
 class DomeAppearance(QObject):
     changed = Signal()
 
@@ -30,6 +46,8 @@ class DomeAppearance(QObject):
         self.timer.timeout.connect(self.refresh)
         if self.enabled:
             self.refresh()
+        else:
+            self.reload(use_defaults=True)
 
     def watch(self):
         paths = self.watcher.files() + self.watcher.directories()
@@ -50,19 +68,19 @@ class DomeAppearance(QObject):
         finally:
             self.watch()
 
-    def reload(self):
+    def reload(self, use_defaults=False):
         try:
-            if self.path.exists() and self.path.stat().st_size > 65536:
+            if not use_defaults and self.path.exists() and self.path.stat().st_size > 65536:
                 return
-            value = json.loads(self.path.read_text()) if self.path.exists() else {}
+            value = json.loads(self.path.read_text()) if not use_defaults and self.path.exists() else {}
             if not isinstance(value, dict):
                 return
-            identifier = value.get('font', 'GNU Unifont / Sans-Serif')
+            identifier = value.get('font', 'Unifont / Sans-Serif')
             size = value.get('font_size', 16)
             opacity = value.get('opacity', 248)
             if not isinstance(identifier, str) or len(identifier) > 256:
                 return
-            if type(size) is not int or not 8 <= size <= 24:
+            if type(size) is not int or not 4 <= size <= 64:
                 return
             if type(opacity) is not int or not 160 <= opacity <= 255:
                 return
@@ -73,18 +91,36 @@ class DomeAppearance(QObject):
                 return
         except (OSError, ValueError, TypeError):
             return
-        font = QFont(self.original_font)
-        parts = identifier.split(' / ')
-        if (len(parts) == 2 and parts[0] in QFontDatabase.families()
-                and parts[1] in QFontDatabase.styles(parts[0])
-                and not QFontDatabase.isSmoothlyScalable(*parts)):
-            candidate = QFont(parts[0])
-            candidate.setStyleName(parts[1])
-            candidate.setPixelSize(size)
-            candidate.setStyleStrategy(QFont.StyleStrategy.PreferBitmap | QFont.StyleStrategy.NoAntialias)
-            resolved = QFontInfo(candidate)
-            if resolved.family() == parts[0] and resolved.pixelSize() == size:
-                font = candidate
+        import subprocess
+        import shutil
+        tool = os.environ.get('DOME_BDF_FONT_TOOL') or shutil.which('dome-bdf-font')
+        if not tool:
+            tool = next((str(parent / 'dome-compositor/target/debug/dome-bdf-font')
+                         for parent in Path(__file__).resolve().parents
+                         if (parent / 'dome-compositor/target/debug/dome-bdf-font').is_file()), None)
+        if not tool:
+            raise RuntimeError('de-xr requires dome-bdf-font and a BDF font')
+        scale = value.get('font_scale', 1)
+        if type(scale) is not int or scale not in (1, 2):
+            return
+        try:
+            choice = json.loads(subprocess.check_output([tool, "--qt", identifier, str(size), str(scale)], text=True, timeout=30))
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return
+        loaded = QFontDatabase.addApplicationFont(choice['file'])
+        families = QFontDatabase.applicationFontFamilies(loaded)
+        if not families:
+            return
+        font = QFont(families[0])
+        font.setStyleName(choice['style'])
+        font.setPixelSize(choice['pixels'])
+        font.setStyleStrategy(QFont.StyleStrategy.PreferBitmap | QFont.StyleStrategy.NoAntialias | QFont.StyleStrategy.NoFontMerging)
+        if use_defaults:
+            self.app.setFont(font)
+            for widget in self.app.allWidgets():
+                widget.setFont(font)
+            self.changed.emit()
+            return
         light = value.get('light', False)
         surface = QColor('#e5e9ef' if light else '#1f252d')
         text = QColor('#1e252e' if light else '#e7ebf1')
@@ -101,6 +137,8 @@ class DomeAppearance(QObject):
             palette.setColor(group, QPalette.ColorRole.Link, accent)
             palette.setColor(group, QPalette.ColorRole.PlaceholderText, muted)
         self.app.setFont(font)
+        for widget in self.app.allWidgets():
+            widget.setFont(font)
         self.app.setPalette(palette)
         self.opacity = opacity / 255
         self.changed.emit()

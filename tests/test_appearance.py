@@ -28,7 +28,7 @@ def environment(monkeypatch, tmp_path):
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
     (tmp_path / 'dome').mkdir()
     path = tmp_path / 'dome/appearance.json'
-    assert QFontDatabase.addApplicationFont(str(Path(__file__).parent / 'fonts/cozette.otb')) >= 0
+    assert QFontDatabase.addApplicationFont(str(Path(__file__).parent / 'fonts/ttyp0-13.bdf')) >= 0
     yield app, path, original, palette
     app.setFont(original)
     app.setPalette(palette)
@@ -43,36 +43,37 @@ def save(path, value):
 def test_bitmap_title_live_changes_and_invalid_strikes(environment, monkeypatch, tmp_path):
     app, path, original, _ = environment
     monkeypatch.setenv('XDG_CURRENT_DESKTOP', 'Dome')
-    save(path, {'font': 'Cozette / Medium', 'font_size': 13})
+    save(path, {'font': 'Ttyp0 / Regular', 'font_size': 13})
     window = ConversionWindow(QSettings(str(tmp_path / 'gui.ini'), QSettings.Format.IniFormat))
     window.show()
     title = next(label for label in window.findChildren(QLabel) if label.text() == 'Arc SBS')
     app.processEvents()
     for widget in (title, window.input_path):
-        assert QFontInfo(widget.font()).family() == 'Cozette'
+        assert QFontInfo(widget.font()).family().startswith('Dome Qt BDF ')
         assert QFontInfo(widget.font()).pixelSize() == 13
-        assert widget.font().styleName() == 'Medium'
-    save(path, {'font': 'Cozette / Medium', 'font_size': 14, 'light': True})
-    wait(app, lambda: window.dome_appearance.app.font() == original)
+        assert widget.font().styleName() == 'Regular'
+    save(path, {'font': 'Ttyp0 / Regular', 'font_size': 14, 'light': True})
+    wait(app, lambda: QFontInfo(app.font()).pixelSize() == 14)
     wait(app, lambda: app.palette().color(QPalette.ColorRole.Window).name() == '#e5e9ef')
-    save(path, {'font': 'Cozette / Medium', 'font_size': 13})
-    wait(app, lambda: QFontInfo(app.font()).family() == 'Cozette' and QFontInfo(title.font()).family() == 'Cozette')
+    save(path, {'font': 'Ttyp0 / Regular', 'font_size': 13})
+    wait(app, lambda: QFontInfo(app.font()).family().startswith('Dome Qt BDF ') and QFontInfo(title.font()).family() == QFontInfo(app.font()).family() and QFontInfo(title.font()).pixelSize() == 13)
     assert QFontInfo(title.font()).pixelSize() == 13
     path.write_text('{')
     for _ in range(25):
         app.processEvents(); time.sleep(.01)
-    assert QFontInfo(title.font()).family() == 'Cozette'
+    assert QFontInfo(title.font()).family().startswith('Dome Qt BDF ')
     window.dome_appearance.watcher.blockSignals(True)
     window.dome_appearance.timer.stop()
     window.close()
 
 
-def test_other_compositor_leaves_qt_font_and_palette(environment, monkeypatch):
+def test_other_compositor_uses_default_bdf_without_session_palette(environment, monkeypatch):
     app, path, original, palette = environment
     monkeypatch.setenv('XDG_CURRENT_DESKTOP', 'KDE')
-    save(path, {'font': 'Cozette / Medium', 'font_size': 13, 'light': True})
+    save(path, {'font': 'Ttyp0 / Regular', 'font_size': 13, 'light': True})
     adapter = DomeAppearance(app)
     assert not adapter.enabled
-    assert app.font() == original
+    assert QFontInfo(app.font()).family().startswith("Dome Qt BDF ")
+    assert QFontInfo(app.font()).pixelSize() == 16
     assert app.palette() == palette
     assert not adapter.watcher.files()
