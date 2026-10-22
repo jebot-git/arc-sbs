@@ -7,7 +7,8 @@ collection. The collection provides a staged local installer with backups;
 running desktop and display-manager sessions are never restarted by installation.
 
 ```sh
-cmake -S fltk -B build-fltk -DCMAKE_PREFIX_PATH=<FLTK prefix>
+cmake -S fltk -B build-fltk -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=/path/to/patched-fltk-1.4.5
 cmake --build build-fltk --parallel 4
 ```
 

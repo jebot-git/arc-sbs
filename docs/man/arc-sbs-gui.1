@@ -1,4 +1,4 @@
-.TH ARC-SBS-GUI 1 "2026-10-20" "de-xr" "User Commands"
+.TH ARC-SBS-GUI 1 "2026-10-21" "de-xr" "User Commands"
 .SH NAME
 arc\-sbs\-gui \- graphical front end for Arc SBS conversion
 .SH SYNOPSIS
@@ -6,6 +6,39 @@ arc\-sbs\-gui \- graphical front end for Arc SBS conversion
 arc\-sbs\-gui
 .fi
 .SH DESCRIPTION
-Open the Qt6 front end for Arc SBS conversion and previews. The GUI requires the gui dependency extra and the same prepared model and GPU runtime as the command\-line converter. Conversion settings and supported backends depend on the installed build.
+Launch the default FLTK 1.4.5 video conversion form and its isolated Python
+worker. Build arc-sbs-fltk separately against the patched toolkit. The Python
+wheel alone does not supply this executable. A prepared depth model and the
+same backend dependencies as the command-line converter are required.
+.PP
+The native form provides file/model selection, compute and encoder choices,
+half/full SBS, strength, convergence, eye order, overwrite confirmation,
+progress, worker logs and cancellation. More options contains frame limits,
+processing quality and device overrides. The first positional filename and
+Qt drag-and-drop behavior are not implemented by the FLTK form.
+.SH ENVIRONMENT
+.TP
+.B DE_XR_TOOLKIT
+Defaults to FLTK. Set exactly Qt6 to select the retained Python Qt frontend;
+install the qt6 extra for that alternative. The gui extra is empty.
+.TP
+.B ARC_SBS_FLTK_BINARY
+Override the native executable. Otherwise use build-fltk/arc-sbs-fltk in the
+source checkout, then arc-sbs-fltk on PATH.
+.TP
+.B DE_XR_FLTK_PREFIX
+Select the native shared-toolkit prefix. The Python wrapper adds its lib
+directory to LD_LIBRARY_PATH.
+.TP
+.B ARC_SBS_MODEL
+Override the default depth model. Keep its companion weights and provenance.
+.SH FILES
+$XDG_CONFIG_HOME/arc-sbs/fltk.json stores native preferences, defaulting to
+~/.config/arc-sbs/fltk.json. The optional Qt frontend uses separate Qt settings.
+.SH EXAMPLES
+.nf
+uv run arc-sbs-gui
+DE_XR_TOOLKIT=Qt6 uv run --extra qt6 arc-sbs-gui
+.fi
 .SH SEE ALSO
 arc\-sbs(1), qimgvr(1)

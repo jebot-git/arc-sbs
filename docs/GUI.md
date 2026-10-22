@@ -1,7 +1,49 @@
-# Qt6 conversion GUI
+# Arc SBS graphical frontends
 
-After local installation, launch **Arc SBS** from the application menu or run
-`~/.local/bin/arc-sbs-gui`. Installed models default to
+## Default FLTK frontend
+
+`arc-sbs-gui` selects FLTK unless `DE_XR_TOOLKIT=Qt6` is set. Build the native
+application against the shared patched FLTK 1.4.5 first:
+
+```sh
+export DE_XR_FLTK_PREFIX=/path/to/patched-fltk-1.4.5
+cmake -S fltk -B build-fltk -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$DE_XR_FLTK_PREFIX"
+cmake --build build-fltk --parallel 4
+uv run arc-sbs-gui
+```
+
+The launcher finds the checkout's `build-fltk/arc-sbs-fltk` or that executable
+on PATH. Override it with `ARC_SBS_FLTK_BINARY`. Launch through the Python
+wrapper so the worker uses the same interpreter and model defaults as the CLI.
+A prepared model and the selected backend's GPU/CPU dependencies are required.
+
+Use the native Browse buttons for input, output and model files. Select Compute,
+Layout, Encoder, Depth strength, Convergence, Swap eyes and Replace existing
+output, then Convert. Progress and the worker log remain visible. Cancel sends
+a cooperative termination request to the isolated worker. More options exposes
+frame limit, processing quality, media-device path and inference-device override.
+Settings persist in `$XDG_CONFIG_HOME/arc-sbs/fltk.json` (normally
+`~/.config/arc-sbs/fltk.json`). The form follows DomeD's live bitmap appearance
+and exports native conversion/file menu commands through DBusMenu.
+
+The FLTK application does not currently implement the Qt frontend's first-file
+argument prefill or drag-and-drop input handler. Use Browse or edit the fields.
+It supports a graphical `--smoke-test FILE` screenshot diagnostic; it does not
+provide the converter's CLI options or a separate GUI `--help` parser. Conversion
+arguments belong to `arc-sbs convert --help`.
+
+The Python wheel/user bundle does not contain this native executable. See
+[installation limitations](../packaging/INSTALL.md) before distributing it.
+
+## Qt6 frontend
+
+The following usage and verification notes apply to the retained Qt6 frontend,
+selected explicitly with the `qt6` extra and environment switch; they do not
+establish equivalent FLTK interaction coverage.
+
+For an installation that includes the optional Qt6 dependencies, run
+`DE_XR_TOOLKIT=Qt6 ~/.local/bin/arc-sbs-gui`. Installed models default to
 `~/.local/share/arc-sbs/models/depth-small.xml` (respects `XDG_DATA_HOME`).
 The optional first argument prefills the input video.
 Drop one local video onto the input field or the window to select it. File URLs
@@ -13,12 +55,12 @@ are rejected.
 For development, launch from the project directory:
 
 ```bash
-uv run --extra gui arc-sbs-gui
+DE_XR_TOOLKIT=Qt6 uv run --extra qt6 arc-sbs-gui
 # Optionally prefill the input:
-uv run --extra gui arc-sbs-gui /path/to/input.mp4
+DE_XR_TOOLKIT=Qt6 uv run --extra qt6 arc-sbs-gui /path/to/input.mp4
 ```
 
-The optional `gui` extra installs PySide6-Essentials (Qt6 Widgets). The command-line
+The optional `qt6` extra installs PySide6-Essentials (Qt6 Widgets); `gui` is empty. The command-line
 converter works without Qt. This GUI targets the existing Linux implementation.
 
 Choose an input video, an MP4/MKV output, and the prepared OpenVINO model. On this
@@ -65,5 +107,5 @@ other detailed CLI options remain available through `arc-sbs convert`.
   test suite. GUI tests skip when the optional Qt dependency is absent.
 
 ```bash
-QT_QPA_PLATFORM=offscreen uv run --extra gui --extra dev pytest -q
+QT_QPA_PLATFORM=offscreen uv run --extra qt6 --extra dev pytest -q
 ```

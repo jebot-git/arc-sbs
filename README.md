@@ -2,13 +2,12 @@
 
 # Arc SBS
 
-The Qt GUI exports native **File**, **Edit**, **View**, **Window**, and **Help**
-menus to DomeD's universal menu bar using Qt's Wayland AppMenu/DBusMenu support.
-File provides input/output/model selection, conversion, cancellation, and the
-output folder. Actions follow conversion availability; Edit operates on the
-focused text field and View stays synchronized with the options/details buttons.
-DomeD supplies desktop/XR window controls. Other desktops can use the same menus
-locally. No platform-theme override is required.
+The default `arc-sbs-gui` launches the native FLTK 1.4.5 conversion form.
+It uses the same isolated Python conversion worker as the optional Qt6 GUI.
+Its native menus export conversion/file actions through DBusMenu for DomeD;
+DomeD supplies desktop/XR window controls. The retained Qt6 frontend is an
+explicit opt-in, not a dependency of the default GUI. See [GUI usage](docs/GUI.md)
+for the two frontends' features and limitations.
 
 An independent Linux command-line prototype for converting SDR 2D video to
 side-by-side stereoscopic video using Intel Arc/OpenVINO, with experimental
@@ -30,20 +29,29 @@ See [provenance](THIRD_PARTY_NOTICES.md).
 
 ## Local installation
 
-Build a wheel, source archive, and user-install bundle, then install the Qt6 GUI
-and command-line converter without root access:
+Build the default native frontend separately from the Python package:
 
 ```bash
-uv lock --check
-python3 packaging/build.py
-python3 packaging/install.py --model models/depth-small.xml
-arc-sbs-gui
+uv sync --python 3.12 --locked
+export DE_XR_FLTK_PREFIX=/path/to/patched-fltk-1.4.5
+cmake -S fltk -B build-fltk -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$DE_XR_FLTK_PREFIX"
+cmake --build build-fltk --parallel 4
+uv run arc-sbs-gui
 ```
 
-The application menu also contains **Arc SBS**. The installer uses an isolated,
-versioned environment under `~/.local/opt/arc-sbs`, copies the prepared model to
-user data storage, and creates launchers in `~/.local/bin`. Add that directory
-to PATH if needed. The installed app runs independently of this checkout.
+`arc-sbs-gui` finds `build-fltk/arc-sbs-fltk` in this checkout, then
+`arc-sbs-fltk` on PATH. `ARC_SBS_FLTK_BINARY` overrides its executable;
+`DE_XR_FLTK_PREFIX` selects its shared runtime. The wrapper sets
+`ARC_SBS_PYTHON` to the active Python interpreter and resolves the model path.
+The `gui` extra is now empty; use the `qt6` extra only for the Qt frontend.
+
+The existing `packaging/build.py` generates Python wheels, source archives and
+user bundles. Those artifacts do **not** include the native FLTK executable or
+its runtime. The legacy `packaging/install.py` still validates PySide6 even
+though the default dependency export no longer supplies it. Its complete GUI
+installation path therefore remains unfinished for this default FLTK branch;
+do not assume the Python bundle is a self-contained desktop installation.
 The Intel bundle in `dist/intel/arc-sbs-0.4.1-intel-linux-user.tar.gz` includes locked, hashed
 dependency requirements; installation needs network access for Python packages.
 Model weights and system GPU drivers are not bundled. See
@@ -130,10 +138,17 @@ A prepared model already exists at `models/depth-small.xml` on this machine;
 skip preparation here. Runtime conversion needs no PyTorch and works offline
 after setup. Keep the `.xml`, `.bin`, and provenance `.json` files together.
 
-## Qt6 GUI
+## Graphical frontends
+
+The FLTK form supports video/model/output selection, compute and encoder choices,
+SBS layout, strength, convergence, eye swapping, overwrite confirmation,
+conversion progress/logs and cancellation. Advanced options include processing
+quality, frame limits and device overrides.
+
+The retained Qt6 GUI is explicitly selected with:
 
 ```bash
-uv run --extra gui arc-sbs-gui
+DE_XR_TOOLKIT=Qt6 uv run --extra qt6 arc-sbs-gui
 ```
 
 Choose input/output video, layout, depth processing and Arc/CPU acceleration.
@@ -310,6 +325,7 @@ its selected backend permits.
 Inside a DomeD session, the GUI watches `dome/appearance.json` in the user's
 configuration directory. Controls and titles follow its palette, opacity and
 bitmap font family, style and native pixel size, including live changes and
-atomic configuration replacement. Outline faces and unavailable bitmap strikes
-fall back to the Qt application font. Other compositors keep normal Qt appearance
-and do not read DomeD's settings.
+atomic configuration replacement. The native frontend uses the shared patched
+FLTK appearance hook. The optional Qt6 frontend has its own appearance adapter;
+its missing bitmap selections fall back to the Qt application font. These
+adapters do not change the CLI or its conversion settings.

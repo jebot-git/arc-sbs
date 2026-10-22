@@ -1,4 +1,4 @@
-.TH ARC-SBS 1 "2026-10-20" "de-xr" "User Commands"
+.TH ARC-SBS 1 "2026-10-21" "de-xr" "User Commands"
 .SH NAME
 arc\-sbs \- convert 2D media into side\-by\-side stereo
 .SH SYNOPSIS
@@ -19,6 +19,13 @@ Print command help.
 devices lists inference devices. prepare\-model prepares the depth model. benchmark measures inference; benchmark\-render measures stereo rendering. convert converts a video. make\-demo generates synthetic input for evaluation.
 .SH CONVERT OPTIONS
 \-\-model PATH selects the model. \-\-renderer cpu|opencl selects the renderer in Intel builds. \-\-device DEVICE selects the inference device. \-\-layout half|full selects SBS packing. \-\-strength N and \-\-convergence N control stereo geometry. \-\-swap\-eyes reverses the eye order. \-\-encoder NAME selects the encoder; \-\-vaapi\-device PATH selects its VA\-API device. \-\-frames N limits processing. \-\-overwrite permits replacing an existing output. \-\-report FILE writes measurements. Backend\-specific choices are listed by convert \-\-help.
+.PP
+\-\-depth-processing full|sampled|model selects depth postprocessing.
+\-\-pipeline serial|overlap selects scheduling (default overlap).
+\-\-smoothing N controls normalization-bound EMA in [0,1).
+\-\-decode-device cpu|vaapi selects experimental decoding.
+\-\-preview-port PORT also streams to a local UDP player; \-\-pace reads at
+nominal playback speed. These are converter options, not GUI launcher options.
 .SH EXAMPLES
 arc\-sbs devices
 .br

@@ -68,6 +68,7 @@ struct DesktopMenu::Impl {
   wl_surface *attachedSurface = nullptr;
   unsigned long attachedXid = 0;
   int nextId = 1;
+  std::vector<int> pendingClicks;
   Impl(Fl_Window &w, Fl_Menu_Bar &m) : window(w), menu(m) {
     static int count = 0;
     path = "/org/de_xr/FLTK/Menu" + std::to_string(++count);
@@ -88,6 +89,7 @@ struct DesktopMenu::Impl {
   }
   ~Impl() {
     Fl::remove_timeout(tick, this);
+    Fl::remove_timeout(runClick, this);
     if (surface)
       org_kde_kwin_appmenu_release(surface);
     if (manager) {
@@ -321,14 +323,25 @@ struct DesktopMenu::Impl {
     return g_variant_new("(i@a{sv}@av)", id, props(id),
                          g_variant_builder_end(&children));
   }
+  // Run application callbacks outside the GDBus dispatch stack. A native
+  // callback may enter a modal FLTK loop; the Event reply and menu polling
+  // must remain available while that dialog is open.
+  static void runClick(void *data) {
+    auto self = static_cast<Impl *>(data);
+    if (self->pendingClicks.empty()) return;
+    int id = self->pendingClicks.front();
+    self->pendingClicks.erase(self->pendingClicks.begin());
+    if (!self->pendingClicks.empty()) Fl::add_timeout(0, runClick, self);
+    self->rebuild();
+    auto it = self->nodes.find(id);
+    if (it != self->nodes.end() && it->second.item &&
+        it->second.children.empty() && self->usable(id))
+      self->menu.picked(it->second.item);
+  }
   void click(int id, const char *event) {
-    auto it = nodes.find(id);
-    if (strcmp(event, "clicked") || it == nodes.end() || !it->second.item ||
-        !it->second.children.empty())
-      return;
-    auto item = it->second.item;
-    if (usable(id))
-      menu.picked(item);
+    if (strcmp(event, "clicked")) return;
+    pendingClicks.push_back(id);
+    if (pendingClicks.size() == 1) Fl::add_timeout(0, runClick, this);
   }
   static GVariant *property(GDBusConnection *, const gchar *, const gchar *,
                             const gchar *, const gchar *name, GError **,
