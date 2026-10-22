@@ -58,8 +58,6 @@ class ConversionWindow(QMainWindow):
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(14)
         title = QLabel('Arc SBS')
-        if not self.dome_appearance.enabled:
-            title.setStyleSheet('font-size: 26px; font-weight: 600;')
         root.addWidget(title)
         subtitle = QLabel('Convert a 2D video to side-by-side 3D')
         root.addWidget(subtitle)
@@ -569,6 +567,8 @@ def main():
         from . import __version__
         print(f'Arc SBS {__version__}')
         return 0
+    from .appearance import bootstrap_fonts
+    bootstrap_fonts()
     app = QApplication(sys.argv)
     app.setApplicationName('Arc SBS')
     app.setOrganizationName('ArcSBS')
