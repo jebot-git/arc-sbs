@@ -11,5 +11,5 @@ artifacts/*
 dist/
 
 # Isolated FLTK experiment build outputs
-/build-fltk/
+/build-fltk*/
 /fltk-*.log

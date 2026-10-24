@@ -1,8 +1,8 @@
-# FLTK 1.4.5 experiment
+# Native FLTK 1.4.5 frontend
 
 OpenGL FLTK conversion form with the existing asynchronous JSON worker. Advanced device/encoder/processing settings, cancellation, persistence and real command menus are implemented.
 
-This experimental default is preserved in the private `fltk-vr` source
+This FLTK default is preserved in the private `fltk-vr` source
 collection. The collection provides a staged local installer with backups;
 running desktop and display-manager sessions are never restarted by installation.
 
@@ -37,3 +37,10 @@ FLTK dialogs inherit the DomeD bitmap font and live palette. The isolated
 `first-configure` toolkit patch prevents transient dialogs from freezing while
 waiting for a redundant second Wayland configure. Ordinary third-party FLTK
 applications need the same appearance hook to follow DomeD automatically.
+
+The native frontend now uses host-aware universal-menu collapse with no empty
+strip, explicit Wayland default/X11 opt-in, appearance-responsive scrollable
+controls, native filename prefill and mpvr output playback. Native UI tests cover
+host gain/loss, hidden-menu shortcuts, Unicode filenames, background completion,
+stereo/eye-order playback arguments and live 2x bitmap font changes. The existing
+deferred DBusMenu callback handling is retained for modal file/options dialogs.

@@ -25,13 +25,29 @@ a cooperative termination request to the isolated worker. More options exposes
 frame limit, processing quality, media-device path and inference-device override.
 Settings persist in `$XDG_CONFIG_HOME/arc-sbs/fltk.json` (normally
 `~/.config/arc-sbs/fltk.json`). The form follows DomeD's live bitmap appearance
-and exports native conversion/file menu commands through DBusMenu.
+and exports native conversion/file menu commands through DBusMenu. The local
+menu disappears and its height is reclaimed only when a working DomeD menu host
+is available; it returns on host loss. Commands and shortcuts remain active.
+Controls use a scrollable, resizable layout with labels above fields so live 2x
+bitmap fonts remain usable. More options follows the same appearance changes.
+The native UI and its dialogs remain GPU-rendered FLTK widgets.
 
-The FLTK application does not currently implement the Qt frontend's first-file
-argument prefill or drag-and-drop input handler. Use Browse or edit the fields.
-It supports a graphical `--smoke-test FILE` screenshot diagnostic; it does not
-provide the converter's CLI options or a separate GUI `--help` parser. Conversion
-arguments belong to `arc-sbs convert --help`.
+A first video filename (including spaces and Unicode) prefills input and derives
+its output filename. Browse or edit the fields to choose another source.
+Ctrl+O opens input, Ctrl+S selects the output path, Ctrl+Enter converts, Escape
+cancels an active job, Ctrl+Comma opens options, Ctrl+P plays the completed output,
+and Ctrl+Q closes the window. Plain Enter in a field does not start conversion.
+**Play output** launches mpvr with the published half/full SBS layout and eye
+order. mpvr routes it spatially to the active DomeD XR session and otherwise uses
+its normal desktop/WayVR behavior. Conversion logs show readable phase/frame
+progress rather than worker protocol JSON.
+
+The default frontend explicitly selects native Wayland. X11 requires both
+`-DARC_SBS_ENABLE_X11=ON` at build time and `--x11` at launch. `--help` documents
+the frontend flags without opening a display. `--smoke-test FILE` waits for
+menu/appearance integration before capturing the window and reports menu height
+and input/output paths as JSON. Converter CLI options remain in
+`arc-sbs convert --help`; drag-and-drop input is not implemented.
 
 The Python wheel/user bundle does not contain this native executable. See
 [installation limitations](../packaging/INSTALL.md) before distributing it.

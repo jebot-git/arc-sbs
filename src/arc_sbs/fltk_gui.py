@@ -1,4 +1,4 @@
-"""Default experimental FLTK GUI, using the unchanged isolated conversion worker."""
+"""Default native FLTK GUI, using the unchanged isolated conversion worker."""
 import os
 from pathlib import Path
 import shutil

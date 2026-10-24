@@ -13,22 +13,24 @@
 #include <FL/Fl_Native_File_Chooser.H>
 #include <FL/Fl_Progress.H>
 #include <FL/Fl_Return_Button.H>
+#include <FL/Fl_Scroll.H>
 #include <FL/Fl_Value_Input.H>
 #include <FL/fl_ask.H>
 #include <chrono>
 #include <fcntl.h>
 #include <glib.h>
+#include <iostream>
 #include <signal.h>
 namespace fs = std::filesystem;
 class Converter : public dx::GpuWindow {
-  Fl_Menu_Bar menu{0, 0, 800, 25};
+  DesktopMenuBar menu{0, 0, 800, 25};
   std::unique_ptr<DesktopMenu> desktop;
   Json preferences;
   std::string quality = "full",
               vaapi = "/dev/dri/by-path/pci-0000:03:00.0-render",
               overrideDevice;
   int frameLimit = 0;
-  Fl_Group form{0, 25, 800, 395};
+  Fl_Scroll form{0, 25, 800, 395};
   Fl_Input source{150, 30, 540, 30, "Input video"},
       output{150, 80, 540, 30, "Output video"},
       model{150, 130, 540, 30, "Depth model"};
@@ -43,8 +45,9 @@ class Converter : public dx::GpuWindow {
   Fl_Check_Button swap{150, 280, 220, 30, "Swap eyes"},
       overwrite{150, 330, 250, 30, "Replace existing output"};
   Fl_Group footer{0, 420, 800, 180};
-  Fl_Return_Button start{150, 380, 220, 32, "Convert"};
-  Fl_Button cancel{390, 380, 150, 32, "Cancel"};
+  Fl_Button start{150, 380, 220, 32, "Convert"};
+  Fl_Button cancel{390, 380, 150, 32, "Cancel"},
+      play{550, 380, 220, 32, "Play output"};
   Fl_Progress progress{20, 435, 760, 25};
   Fl_Multiline_Output log{20, 475, 760, 105};
   pid_t child = -1;
@@ -52,6 +55,11 @@ class Converter : public dx::GpuWindow {
   fs::path jobfile;
   std::string buffer, messages;
   bool stopping = false;
+  uint64_t appearanceRevision = UINT64_MAX;
+  std::string completedOutput, completedLayout;
+  bool completedSwap = false;
+  std::string pendingOutput, pendingLayout;
+  bool pendingSwap = false;
   std::chrono::steady_clock::time_point stopped;
   static void tick(void *p) {
     auto self = static_cast<Converter *>(p);
@@ -68,11 +76,10 @@ class Converter : public dx::GpuWindow {
     Fl_Native_File_Chooser c;
     c.type(type);
     if (c.show() == 0) {
-      field.value(c.filename());
-      if (&field == &source && !*output.value())
-        output.value((fs::path(source.value()).parent_path() /
-                      (fs::path(source.value()).stem().string() + "-sbs.mp4"))
-                         .c_str());
+      if (&field == &source)
+        setSource(c.filename());
+      else
+        field.value(c.filename());
     }
   }
   void cleanup() {
@@ -95,7 +102,14 @@ class Converter : public dx::GpuWindow {
     if (kind == "failed")
       showlog(j.value("message", std::string("Conversion failed")));
     else if (kind == "completed") {
-      showlog("Completed: " + j.value("result", Json::object()).dump());
+      auto result = j.value("result", Json::object());
+      completedOutput = result.value("output", pendingOutput);
+      completedLayout = result.value("layout", pendingLayout);
+      completedSwap =
+          result.value("eye_order", pendingSwap ? std::string("right_left")
+                                                : std::string("left_right")) ==
+          "right_left";
+      showlog("Completed: " + completedOutput);
       progress.value(1);
     } else if (kind == "cancelled")
       showlog("Cancelled");
@@ -104,10 +118,23 @@ class Converter : public dx::GpuWindow {
       int frame = j.value("frames", 0), total = j.value("total", 0);
       if (total > 0)
         progress.value(double(frame) / total);
-      showlog(j.dump());
+      showlog((phase.empty() ? std::string("Converting") : phase) + ": " +
+              std::to_string(frame) +
+              (total > 0 ? " / " + std::to_string(total) : " frames"));
     }
   }
   void pump() {
+    if (appearanceRevision != dx::font_revision) {
+      appearanceRevision = dx::font_revision;
+      relayout();
+    }
+    bool ready =
+        !completedOutput.empty() && fs::is_regular_file(completedOutput);
+    if (ready)
+      play.activate();
+    else
+      play.deactivate();
+    dx::enable_menu(menu, "File/Play output", ready);
     dx::enable_menu(menu, "Conversion/Convert", child <= 0);
     dx::enable_menu(menu, "Conversion/Cancel", child > 0);
     dx::enable_menu(menu, "Conversion/More options", child <= 0);
@@ -190,6 +217,9 @@ class Converter : public dx::GpuWindow {
           {"pipeline", "overlap"},
           {"frames", frameLimit > 0 ? Json(frameLimit) : Json()},
           {"vaapi_device", vaapi}};
+      pendingOutput = out.string();
+      pendingLayout = layout.value() == 0 ? "half" : "full";
+      pendingSwap = swap.value();
       preferences["model"] = m.string();
       preferences["input_dir"] = in.parent_path().string();
       store();
@@ -306,9 +336,34 @@ class Converter : public dx::GpuWindow {
     dialog.end();
     dialog.set_modal();
     dx::style(&dialog);
+    auto layoutDialog = [&] {
+      int pad = 16, label = dx::size + 8, field = std::max(30, dx::size + 12),
+          gap = 12;
+      int width = std::max(650, dx::size * 30),
+          height = pad * 2 + 4 * (label + field + gap) + field + gap;
+      dialog.size(width, height);
+      int y = pad + label;
+      for (auto *widget :
+           std::vector<Fl_Widget *>{&processing, &gpu, &media, &frames}) {
+        widget->align(FL_ALIGN_TOP_LEFT);
+        widget->resize(pad, y, width - pad * 2, field);
+        y += label + field + gap;
+      }
+      close.resize(pad, height - pad - field, (width - pad * 3) / 2, field);
+      apply.resize(pad * 2 + (width - pad * 3) / 2, height - pad - field,
+                   (width - pad * 3) / 2, field);
+      dialog.redraw();
+    };
+    layoutDialog();
     dialog.show();
-    while (dialog.shown())
-      Fl::wait();
+    auto revision = dx::font_revision;
+    while (dialog.shown()) {
+      Fl::wait(.05);
+      if (revision != dx::font_revision) {
+        revision = dx::font_revision;
+        layoutDialog();
+      }
+    }
     if (accepted) {
       try {
         auto limit = std::stoi(frames.value());
@@ -343,12 +398,34 @@ class Converter : public dx::GpuWindow {
       if (*output.value())
         dx::spawn({"gio", "open",
                    fs::absolute(output.value()).parent_path().string()});
-    } else if (value == "Quit")
+    } else if (value == "Play output")
+      playOutput();
+    else if (value == "Quit")
       do_callback();
   }
 
 public:
-  Converter() : dx::GpuWindow(800, 600, "Arc SBS — FLTK experiment") {
+  bool capture(const char *path) {
+    make_current();
+    auto invalidate = [](auto &&self, Fl_Widget &widget) -> void {
+      widget.damage(FL_DAMAGE_ALL);
+      if (auto group = widget.as_group())
+        for (int i = 0; i < group->children(); ++i) self(self, *group->child(i));
+    };
+    invalidate(invalidate, *this);
+    draw();
+    const int width = pixel_w(), height = pixel_h();
+    std::vector<unsigned char> pixels(size_t(width) * height * 3);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    if (glGetError() != GL_NO_ERROR) return false;
+    std::ofstream stream(path, std::ios::binary);
+    stream << "P6\n" << width << " " << height << "\n255\n";
+    for (int row = height - 1; row >= 0; --row)
+      stream.write(reinterpret_cast<const char *>(pixels.data() + size_t(row) * width * 3), width * 3);
+    return bool(stream);
+  }
+  Converter() : dx::GpuWindow(800, 650, "Arc SBS") {
     xclass("arc-sbs");
     // Explicit parenting keeps the editable form separate from worker controls.
     form.end();
@@ -373,6 +450,7 @@ public:
              {"File/Output path", FL_CTRL + 's'},
              {"File/Depth model", 0},
              {"File/Open output folder", 0},
+             {"File/Play output", FL_CTRL + 'p'},
              {"File/Quit", FL_CTRL + 'q'},
              {"Conversion/Convert", FL_CTRL + FL_Enter},
              {"Conversion/Cancel", FL_Escape},
@@ -386,15 +464,23 @@ public:
           this);
     add(start);
     add(cancel);
+    add(play);
     add(footer);
     footer.add(progress);
     footer.add(log);
-    device.add("Intel Arc|CPU");
+    auto backend = getenv("ARC_SBS_DEFAULT_DEVICE");
+    std::string gpuName =
+        backend && std::string(backend) != "ARC" ? backend : "Intel Arc";
+    device.add((gpuName + " (GPU)|CPU").c_str());
     device.value(0);
     layout.add("Half SBS|Full SBS");
     layout.value(0);
-    encoder.add("h264_vaapi|libx264|hevc_vaapi|av1_vaapi");
-    encoder.value(0);
+    encoder.add("H.264 (GPU)|H.264 (CPU)|HEVC (GPU)|AV1 (GPU)");
+    encoder.value(getenv("ARC_SBS_DEFAULT_ENCODER") &&
+                          std::string(getenv("ARC_SBS_DEFAULT_ENCODER")) ==
+                              "libx264"
+                      ? 1
+                      : 0);
     strength.range(0, .1);
     strength.step(.001);
     strength.value(.025);
@@ -424,6 +510,9 @@ public:
           s->choose(s->model, Fl_Native_File_Chooser::BROWSE_FILE);
         },
         this);
+    play.callback(
+        [](Fl_Widget *, void *p) { static_cast<Converter *>(p)->playOutput(); },
+        this);
     start.callback([](Fl_Widget *, void *p) { ((Converter *)p)->begin(); },
                    this);
     cancel.callback([](Fl_Widget *, void *p) { ((Converter *)p)->stop(); },
@@ -451,12 +540,129 @@ public:
       convergence.value(
           std::clamp(preferences.value("convergence", .5), 0., 1.));
       layout.value(std::clamp(preferences.value("layout", 0), 0, 1));
-      encoder.value(std::clamp(preferences.value("encoder", 0), 0, 3));
+      encoder.value(
+          std::clamp(preferences.value("encoder", encoder.value()), 0, 3));
     } catch (...) {
       preferences = Json::object();
     }
+    model.position(0);
+    menu.layoutChanged = [this] { relayout(); };
+    form.type(Fl_Scroll::VERTICAL);
+    resizable(form);
+    size_range(600, 420);
+    relayout();
     desktop = std::make_unique<DesktopMenu>(*this, menu);
     Fl::add_timeout(.1, tick, this);
+  }
+  void relayout() {
+    int pad = 12, field = std::max(30, dx::size + 12), label = dx::size + 8,
+        gap = 10;
+    fl_font(dx::font, dx::size);
+    bool stackButtons = w() < int(fl_width("Play output") + 32) * 3 + pad * 4;
+    int footerHeight = std::max(160, field * (stackButtons ? 3 : 2) + 80);
+    int top = menu.h();
+    menu.resize(0, 0, w(), menu.h());
+    form.scroll_to(0, 0);
+    form.resize(0, top, w(), std::max(80, h() - top - footerHeight));
+    int scroll =
+        form.scrollbar_size() ? form.scrollbar_size() : Fl::scrollbar_size();
+    int available = w() - pad * 2 - scroll;
+    int browse = std::max(85, int(dx::size * 5.5) + 24);
+    int y = top + pad + label;
+    for (auto pair : std::vector<std::pair<Fl_Input *, Fl_Button *>>{
+             {&source, &browseIn},
+             {&output, &browseOut},
+             {&model, &browseModel}}) {
+      pair.first->align(FL_ALIGN_TOP_LEFT);
+      pair.first->resize(pad, y, available - browse - gap, field);
+      pair.second->resize(pad + available - browse, y, browse, field);
+      y += field + label + gap;
+    }
+    int column = (available - gap) / 2, right = pad + column + gap;
+    for (auto pair : std::vector<std::pair<Fl_Widget *, Fl_Widget *>>{
+             {&device, &layout},
+             {&encoder, &strength},
+             {&swap, &convergence}}) {
+      pair.first->align(pair.first == &swap ? FL_ALIGN_LEFT | FL_ALIGN_INSIDE
+                                            : FL_ALIGN_TOP_LEFT);
+      pair.second->align(FL_ALIGN_TOP_LEFT);
+      pair.first->resize(pad, y, column, field);
+      pair.second->resize(right, y, column, field);
+      y += field + label + gap;
+    }
+    overwrite.resize(pad, y, available, field);
+    footer.resize(0, h() - footerHeight, w(), footerHeight);
+    int bottom = h() - footerHeight + pad;
+    int button = (w() - pad * (stackButtons ? 3 : 4)) / (stackButtons ? 2 : 3);
+    start.resize(pad, bottom, button, field);
+    cancel.resize(pad * 2 + button, bottom, button, field);
+    if (stackButtons)
+      play.resize(pad, bottom + field + gap, w() - pad * 2, field);
+    else
+      play.resize(pad * 3 + button * 2, bottom, button, field);
+    int progressY = bottom + (field + gap) * (stackButtons ? 2 : 1);
+    progress.resize(pad, progressY, w() - pad * 2, 20);
+    log.resize(pad, progressY + 28, w() - pad * 2,
+               std::max(30, h() - (progressY + 28) - pad));
+    redraw();
+  }
+  void resize(int x, int y, int width, int height) override {
+    dx::GpuWindow::resize(x, y, width, height);
+    relayout();
+  }
+  void setSource(const std::string &path) {
+    source.value(path.c_str());
+    source.position(0);
+    auto destination = fs::path(path).parent_path() /
+                       (fs::path(path).stem().string() + "-sbs.mp4");
+    output.value(destination.c_str());
+    output.position(0);
+  }
+  void playOutput() {
+    if (completedOutput.empty() || !fs::is_regular_file(completedOutput))
+      return;
+    std::vector<std::string> args = {
+        "mpvr", "--xr-output=auto",
+        "--sbs-layout=" +
+            std::string(completedLayout == "half" ? "half-sbs" : "full-sbs")};
+    if (completedSwap)
+      args.push_back("--swap-eyes");
+    args.push_back("--");
+    args.push_back(completedOutput);
+    auto pid = dx::spawn(args);
+    if (pid < 0)
+      showlog("Cannot start mpvr; check that it is installed.");
+    else
+      g_child_watch_add(
+          pid, [](GPid child, gint, gpointer) { g_spawn_close_pid(child); },
+          nullptr);
+  }
+  DesktopMenuBar &menuBar() { return menu; }
+  std::string inputPath() const { return source.value(); }
+  std::string outputPath() const { return output.value(); }
+  int formTop() const { return form.y(); }
+  bool busy() const { return child > 0; }
+  bool canPlay() const { return play.active(); }
+  void invoke(const std::string &name) { command(name); }
+  bool layoutFits() const {
+    for (auto *widget : std::vector<const Fl_Widget *>{
+             &source, &output, &model, &device, &layout, &encoder, &strength,
+             &convergence, &overwrite, &swap})
+      if (widget->x() < 0 || widget->x() + widget->w() > w() ||
+          widget->h() < dx::size)
+        return false;
+    for (auto *widget : std::vector<const Fl_Widget *>{&start, &cancel, &play})
+      if (widget->y() + widget->h() > h() || widget->h() < dx::size)
+        return false;
+    return true;
+  }
+  int handle(int event) override {
+    if (event == FL_SHORTCUT && Fl::event_key() == FL_Escape) {
+      if (child > 0)
+        stop();
+      return 1;
+    }
+    return dx::GpuWindow::handle(event);
   }
   ~Converter() {
     store();
@@ -477,9 +683,61 @@ public:
     }
   }
 };
-int main(int argc, char **argv) {
+#ifndef ARC_SBS_TESTING
+int main(int argc, char **argv) try {
+  bool x11 = false;
+  std::string input, capture;
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == "--x11")
+      x11 = true;
+    else if (arg == "--help") {
+      std::cout << "Arc SBS: native FLTK Wayland video converter\nUsage: "
+                   "arc-sbs-gui [VIDEO] [--x11]\n--x11 requires "
+                   "-DARC_SBS_ENABLE_X11=ON at build time.\n";
+      return 0;
+    } else if (arg == "--smoke-test" && i + 1 < argc)
+      capture = argv[++i];
+    else if (arg.rfind("--", 0) == 0)
+      throw std::runtime_error("Unknown frontend option: " + arg);
+    else
+      input = arg;
+  }
+#if !ARC_SBS_ENABLE_X11
+  if (x11 ||
+      (getenv("FLTK_BACKEND") && std::string(getenv("FLTK_BACKEND")) == "x11"))
+    throw std::runtime_error(
+        "X11 is a build-time opt-in (-DARC_SBS_ENABLE_X11=ON)");
+#endif
+  setenv("FLTK_BACKEND", x11 ? "x11" : "wayland", 1);
   dx::init();
   Converter app;
-  dx::smoke(app, argc, argv);
+  if (!input.empty())
+    app.setSource(input);
+  dx::style(&app);
+  app.show();
+  if (!capture.empty()) {
+    for (int i = 0; i < 24; ++i)
+      Fl::wait(.025);
+    if (!app.capture(capture.c_str()))
+      throw std::runtime_error("Cannot capture frontend");
+    std::cout << Json{{"toolkit", "FLTK"},
+                      {"version", "1.4.5"},
+                      {"font", dx::font_name},
+                      {"size", dx::size},
+                      {"universal_menu", app.menuBar().universal()},
+                      {"menu_height", app.menuBar().h()},
+                      {"form_top", app.formTop()},
+                      {"input", app.inputPath()},
+                      {"output", app.outputPath()}}
+                     .dump()
+              << '\n';
+    app.hide();
+    return 0;
+  }
   return Fl::run();
+} catch (const std::exception &e) {
+  std::cerr << "Arc SBS: " << e.what() << '\n';
+  return 1;
 }
+#endif
