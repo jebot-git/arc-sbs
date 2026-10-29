@@ -69,3 +69,15 @@ def test_socket_identity_survives_compositor_binary_replacement(monkeypatch):
     monkeypatch.setattr(domed.socket,'socket',lambda *args:Connection())
     monkeypatch.setattr(domed.os,'readlink',lambda path:'/usr/local/bin/dome-compositor (deleted)')
     assert domed.socket_identity('/test') == 42
+
+
+def test_automatic_images_follow_working_mode_with_headset_still_active(monkeypatch):
+    import io
+    output = domed.DomeDOutput()
+    context = {'pid':42,'base':'http://127.0.0.1:12345','socket':'dome-xr'}
+    monkeypatch.setattr(output, 'status', lambda:(context, {'xr_active':True}))
+    for mode in ['desktop','xr']:
+        monkeypatch.setattr(output.http, 'open', lambda *a, **k:io.BytesIO(json.dumps({'input_realm':mode}).encode()))
+        assert output.connected() == (mode == 'xr')
+    monkeypatch.setattr(output.http, 'open', lambda *a, **k:io.BytesIO(b'{broken'))
+    assert not output.connected()

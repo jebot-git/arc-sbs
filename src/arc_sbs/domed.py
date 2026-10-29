@@ -94,7 +94,13 @@ class DomeDOutput:
 
     def connected(self):
         status = self.status()
-        return bool(status and status[1].get('xr_active') is True)
+        if not status or status[1].get('xr_active') is not True:
+            return False
+        try:
+            with self.http.open(status[0]['base'] + '/api/xr-control', timeout=1) as response:
+                return json.loads(response.read(4097)).get('input_realm') == 'xr'
+        except (OSError, ValueError):
+            return False
 
     def present(self, presenter, image):
         status = self.status()
