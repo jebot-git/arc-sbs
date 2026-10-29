@@ -1,0 +1,1 @@
+Validation correction: the focused routing run completed 5 passing tests, not 8. The optional legacy Qt appearance test suite crashed before completing; no full-suite pass is claimed. See the original local arc-routing-tests.log for the exact result.
